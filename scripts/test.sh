@@ -2,9 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BASE_DIR="${ROOT_DIR}"
-SMOKE_DIR="${BASE_DIR}/tests/smoke"
-BATS_ARGS=()
+SMOKE_DIR="${ROOT_DIR}/tests/smoke"
 IMAGE_REF=""
 
 usage() {
@@ -28,38 +26,23 @@ log() {
   printf '[base-test] %s\n' "$*" >&2
 }
 
-parse_args() {
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      --image)
-        [[ $# -ge 2 ]] || usage
-        IMAGE_REF="$2"
-        shift 2
-        ;;
-      -h|--help)
-        usage
-        ;;
-      --)
-        shift
-        BATS_ARGS=("$@")
-        break
-        ;;
-      *)
-        usage
-        ;;
-    esac
-  done
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --image)
+      [[ $# -ge 2 ]] || usage
+      IMAGE_REF="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      ;;
+    *)
+      usage
+      ;;
+  esac
+done
 
-  if [[ -z "${IMAGE_REF}" ]]; then
-    log "--image is required"
-    usage
-  fi
-}
+[[ -n "${IMAGE_REF}" ]] || { log "--image is required"; usage; }
 
-run_tests() {
-  log "Running base smoke tests via bats"
-  AICAGE_IMAGE_BASE_IMAGE="${IMAGE_REF}" bats "${SMOKE_DIR}" "${BATS_ARGS[@]}"
-}
-
-parse_args "$@"
-run_tests
+log "Running base smoke tests via bats"
+AICAGE_IMAGE_BASE_IMAGE="${IMAGE_REF}" bats "${SMOKE_DIR}" "$@"

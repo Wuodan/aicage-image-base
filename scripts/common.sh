@@ -12,17 +12,6 @@ _die() {
   fi
 }
 
-contains() {
-  local needle=$1; shift
-  local item
-  for item in "$@"; do
-    if [[ "$item" == "$needle" ]]; then
-      return 0
-    fi
-  done
-  return 1
-}
-
 load_env_file() {
   local env_file="${ROOT_DIR}/.env"
 
@@ -40,12 +29,6 @@ load_env_file() {
       fi
     fi
   done < "${env_file}"
-}
-
-split_list() {
-  local raw="$1"
-  local -n out=$2
-  read -r -a out <<< "${raw}"
 }
 
 get_base_field() {

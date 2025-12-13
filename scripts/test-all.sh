@@ -2,65 +2,20 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BASE_DIR="${ROOT_DIR}"
-BATS_ARGS=()
 
 die() {
   echo "[base-test-all] $*" >&2
   exit 1
 }
 
-usage() {
-  cat <<'USAGE'
-Usage: scripts/test-all.sh [options] [-- <bats-args>]
-
-Runs smoke tests for every base image. Image references are derived from repository/version values.
-Bats args after -- are forwarded to each scripts/test.sh invocation.
-
-Options:
-  -h, --help      Show this help and exit
-
-Examples:
-  scripts/test-all.sh
-  scripts/test-all.sh -- --filter base
-USAGE
-  exit 1
-}
-
 # shellcheck source=../scripts/common.sh
 source "${ROOT_DIR}/scripts/common.sh"
 
-parse_args() {
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      -h|--help)
-        usage
-        ;;
-      --)
-        shift
-        BATS_ARGS=("$@")
-        break
-        ;;
-      *)
-        usage
-        ;;
-    esac
-  done
-}
+load_env_file
 
-main() {
-  parse_args "$@"
-  load_env_file
-
-  local repository="${AICAGE_IMAGE_BASE_REPOSITORY}"
-  local version="${AICAGE_VERSION}"
-
-  for base_dir in "${BASE_DIR}/bases"/*; do
-    base_alias="$(basename "${base_dir}")"
-    local image="${repository}:${base_alias}-${version}"
-    echo "[base-test-all] Testing ${image}" >&2
-    "${BASE_DIR}/scripts/test.sh" --image "${image}" -- "${BATS_ARGS[@]}"
-  done
-}
-
-main "$@"
+for base_dir in "${ROOT_DIR}/bases"/*; do
+  BASE_ALIAS="$(basename "${base_dir}")"
+  IMAGE="${AICAGE_IMAGE_BASE_REPOSITORY}:${BASE_ALIAS}-${AICAGE_VERSION}"
+  echo "[base-test-all] Testing ${IMAGE}" >&2
+  "${ROOT_DIR}/scripts/test.sh" --image "${IMAGE}" -- "$@"
+done

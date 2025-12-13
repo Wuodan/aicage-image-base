@@ -2,7 +2,6 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BASE_DIR="${ROOT_DIR}"
 
 die() {
   echo "[build-base-all] $*" >&2
@@ -35,24 +34,22 @@ fi
 
 load_env_file
 
-platform_override=""
-push_flag=""
-version_override=""
+PUSH_FLAG=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --platform)
       [[ $# -ge 2 ]] || { echo "[build-base-all] --platform requires a value" >&2; exit 1; }
-      platform_override="$2"
+      AICAGE_PLATFORMS="$2"
       shift 2
       ;;
     --push)
-      push_flag="--push"
+      PUSH_FLAG="--push"
       shift
       ;;
     --version)
       [[ $# -ge 2 ]] || { echo "[build-base-all] --version requires a value" >&2; exit 1; }
-      version_override="$2"
+      AICAGE_VERSION="$2"
       shift 2
       ;;
     -h|--help)
@@ -64,31 +61,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-platforms=()
-if [[ -n "${platform_override}" ]]; then
-  split_list "${platform_override}" platforms
-  echo "[build-base-all] Building platform ${platforms[*]}." >&2
-elif [[ -n "${AICAGE_PLATFORMS:-${PLATFORMS:-}}}" ]]; then
-  split_list "${AICAGE_PLATFORMS:-${PLATFORMS:-}}" platforms
-  echo "[build-base-all] Building platforms ${platforms[*]}." >&2
-else
-  die "Platform list is empty; set AICAGE_PLATFORMS or use --platform."
-fi
-
-platform_arg=(--platform "${platforms[*]}")
-if [[ -n "${version_override}" ]]; then
-  AICAGE_VERSION="${version_override}"
-fi
-
-for base_dir in "${BASE_DIR}/bases"/*; do
-  base_alias="$(basename "${base_dir}")"
-  local_platforms="${platforms[*]}"
-  base_image="$(get_base_field "${base_alias}" base_image)"
-  installer="$(get_base_field "${base_alias}" os_installer)"
-  echo "[build-base-all] Building ${base_alias} (upstream: ${base_image}; platforms: ${local_platforms})" >&2
-  if [[ -n "${push_flag}" ]]; then
-    "${BASE_DIR}/scripts/build.sh" --base "${base_alias}" "${platform_arg[@]}" "${push_flag}" --version "${AICAGE_VERSION}"
+for base_dir in "${ROOT_DIR}/bases"/*; do
+  BASE_ALIAS="$(basename "${base_dir}")"
+  BASE_IMAGE="$(get_base_field "${BASE_ALIAS}" base_image)"
+  INSTALLER="$(get_base_field "${BASE_ALIAS}" os_installer)"
+  echo "[build-base-all] Building ${BASE_ALIAS} (upstream: ${BASE_IMAGE}; platforms: ${AICAGE_PLATFORMS})" >&2
+  if [[ -n "${PUSH_FLAG}" ]]; then
+    "${ROOT_DIR}/scripts/build.sh" --base "${BASE_ALIAS}" --platform "${AICAGE_PLATFORMS}" "${PUSH_FLAG}" --version "${AICAGE_VERSION}"
   else
-    "${BASE_DIR}/scripts/build.sh" --base "${base_alias}" "${platform_arg[@]}" --version "${AICAGE_VERSION}"
+    "${ROOT_DIR}/scripts/build.sh" --base "${BASE_ALIAS}" --platform "${AICAGE_PLATFORMS}" --version "${AICAGE_VERSION}"
   fi
 done

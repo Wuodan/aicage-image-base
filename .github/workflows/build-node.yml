@@ -1,4 +1,4 @@
-name: Build Base Image (Alpine)
+name: Build Base Image (Node)
 
 "on":
   push:
@@ -8,7 +8,7 @@ name: Build Base Image (Alpine)
 
 jobs:
   build:
-    uses: ./.github/workflows/base-image.yml
+    uses: ./.github/workflows/build.yml
     with:
-      base: alpine
+      base: node
     secrets: inherit

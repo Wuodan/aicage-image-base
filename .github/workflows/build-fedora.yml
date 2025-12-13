@@ -1,4 +1,4 @@
-name: Build Base Image (Debian)
+name: Build Base Image (Fedora)
 
 "on":
   push:
@@ -8,7 +8,7 @@ name: Build Base Image (Debian)
 
 jobs:
   build:
-    uses: ./.github/workflows/base-image.yml
+    uses: ./.github/workflows/build.yml
     with:
-      base: debian
+      base: fedora
     secrets: inherit

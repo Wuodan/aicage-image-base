@@ -1,4 +1,4 @@
-name: Build Base Image (Fedora)
+name: Build Base Image (Alpine)
 
 "on":
   push:
@@ -8,7 +8,7 @@ name: Build Base Image (Fedora)
 
 jobs:
   build:
-    uses: ./.github/workflows/base-image.yml
+    uses: ./.github/workflows/build.yml
     with:
-      base: fedora
+      base: alpine
     secrets: inherit

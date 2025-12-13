@@ -1,4 +1,4 @@
-name: Build Base Image (Node)
+name: Build Base Image (Debian)
 
 "on":
   push:
@@ -8,7 +8,7 @@ name: Build Base Image (Node)
 
 jobs:
   build:
-    uses: ./.github/workflows/base-image.yml
+    uses: ./.github/workflows/build.yml
     with:
-      base: node
+      base: debian
     secrets: inherit

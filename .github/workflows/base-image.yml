@@ -1,8 +1,9 @@
-name: Build Single Base Image
+name: Build Base Image (Template)
+
 run-name: Build base image (${{ inputs.base }})
 
-"on":
-  workflow_dispatch:
+on:
+  workflow_call:
     inputs:
       base:
         description: Base alias to build (matches bases/<alias>)
@@ -13,9 +14,11 @@ jobs:
   build:
     name: Build, test, and publish ${{ inputs.base }}
     runs-on: ubuntu-latest
+
     env:
       BASE_ALIAS: ${{ inputs.base }}
       AICAGE_VERSION: ${{ github.ref_name }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.1

@@ -1,0 +1,14 @@
+name: Build Base Image (Debian)
+
+"on":
+  push:
+    tags:
+      - "*"
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    uses: ./.github/workflows/base-image.yml
+    with:
+      base: debian
+    secrets: inherit

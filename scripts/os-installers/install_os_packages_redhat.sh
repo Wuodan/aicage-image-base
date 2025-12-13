@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if ! command -v dnf >/dev/null; then
-  echo "Unsupported base image for aicage; dnf required" >&2
-  exit 1
-fi
-
 dnf -y makecache
 dnf -y group install development-tools
 dnf -y install \

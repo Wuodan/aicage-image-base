@@ -1,0 +1,14 @@
+name: Build Base Image (Alpine)
+
+"on":
+  push:
+    tags:
+      - "*"
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    uses: ./.github/workflows/base-image.yml
+    with:
+      base: alpine
+    secrets: inherit

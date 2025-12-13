@@ -23,11 +23,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6.0.1
 
-      - name: Load variables from .env
-        run: |
-          source .env
-          echo "AICAGE_IMAGE_BASE_REPOSITORY=${AICAGE_IMAGE_BASE_REPOSITORY}" >> "${GITHUB_ENV}"
-
       - name: Validate base alias
         run: |
           if [[ ! -d "bases/${BASE_ALIAS}" ]]; then
@@ -52,8 +47,9 @@ jobs:
 
       - name: "Test: Run smoke suite on base image"
         run: |
+          repo="$(yq -er '.AICAGE_IMAGE_BASE_REPOSITORY' config.yaml)"
           scripts/test.sh \
-            --image "${AICAGE_IMAGE_BASE_REPOSITORY}:${BASE_ALIAS}-${AICAGE_VERSION}"
+            --image "${repo}:${BASE_ALIAS}-${AICAGE_VERSION}"
 
       - name: "Publish: Set up QEMU"
         uses: docker/setup-qemu-action@v3.7.0

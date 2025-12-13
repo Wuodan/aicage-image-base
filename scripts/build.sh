@@ -68,7 +68,7 @@ done
 
 [[ -n "${BASE_ALIAS}" ]] || die "--base is required"
 
-load_env_file
+load_config_file
 
 BASE_IMAGE="$(get_base_field "${BASE_ALIAS}" base_image)"
 OS_INSTALLER="$(get_base_field "${BASE_ALIAS}" os_installer)"

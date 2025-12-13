@@ -11,7 +11,7 @@ die() {
 # shellcheck source=../scripts/common.sh
 source "${ROOT_DIR}/scripts/common.sh"
 
-load_env_file
+load_config_file
 
 for base_dir in "${ROOT_DIR}/bases"/*; do
   BASE_ALIAS="$(basename "${base_dir}")"

@@ -1,0 +1,4 @@
+# aicage settings
+AICAGE_IMAGE_BASE_REPOSITORY: wuodan/aicage-image-base
+AICAGE_VERSION: dev
+AICAGE_PLATFORMS: "linux/amd64 linux/arm64"

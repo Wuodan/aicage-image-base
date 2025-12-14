@@ -1,15 +1,21 @@
 # aicage-image-base
 
-Base images for the aicage agent builds. Each base alias lives in `bases/<alias>/base.yaml` and is
-built by the scripts in `scripts/`.
+Base layers for the aicage agent images. Each base bundles an OS and common prerequisites; agent
+images in [Wuodan/aicage-image](https://github.com/Wuodan/aicage-image) build on top of these tags.
 
-## Commands
+## What’s included
 
-- Build single base: `scripts/build.sh --base fedora --platform linux/amd64`
-- Build all bases: `scripts/build-all.sh --platform linux/amd64`
-- Smoke tests: `scripts/test-all.sh`
+- Base aliases such as `ubuntu`, `fedora`, and `act`, each defined under `bases/<alias>/`.
+- Multi-arch support: `linux/amd64` and `linux/arm64`.
 
-## CI
+## Tag format
 
-GitHub Actions runs `aicage-image-base/.github/workflows/base-images.yml` on tags only. It lint/builds/tests,
-then publishes `${AICAGE_IMAGE_BASE_REPOSITORY}:<alias>-<version>` and `:latest` tags.
+`${AICAGE_BASE_REPOSITORY:-wuodan/aicage-image-base}:<base>-<version>`
+
+- Example: `wuodan/aicage-image-base:ubuntu-latest`
+- `<base>-latest` tags are convenience aliases for the newest published version of a base.
+
+## Contributing
+
+See `DEVELOPMENT.md` for how to build, test, and publish new base images. AI coding agents should
+also read `AGENTS.md`.

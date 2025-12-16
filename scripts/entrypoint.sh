@@ -32,30 +32,6 @@ mkdir -p /workspace
 chown "${TARGET_UID}:${TARGET_GID}" /workspace
 chown -R "${TARGET_UID}:${TARGET_GID}" "${TARGET_HOME}"
 
-resolve_target_path() {
-  local raw="$1"
-  if [[ "${raw}" == "~/"* ]]; then
-    echo "${TARGET_HOME}/${raw:2}"
-  else
-    echo "${raw}"
-  fi
-}
-
-link_optional_mount() {
-  local mount_path="$1"
-  local target_hint="$2"
-  if [[ -z "${target_hint}" ]]; then
-    return
-  fi
-  if [[ ! -e "${mount_path}" ]]; then
-    return
-  fi
-  local target_path
-  target_path="$(resolve_target_path "${target_hint}")"
-  mkdir -p "$(dirname "${target_path}")"
-  ln -sfn "${mount_path}" "${target_path}"
-}
-
 TOOL_MOUNT="/aicage/tool-config"
 if [[ -n "${AICAGE_TOOL_PATH:-}" ]]; then
   target_path="${AICAGE_TOOL_PATH}"
@@ -68,9 +44,19 @@ if [[ -n "${AICAGE_TOOL_PATH:-}" ]]; then
   ln -sfn "${TOOL_MOUNT}" "${target_path}"
 fi
 
-link_optional_mount "/aicage/host/gitconfig" "${AICAGE_GITCONFIG_TARGET:-}"
-link_optional_mount "/aicage/host/gnupg" "${AICAGE_GNUPG_TARGET:-}"
-link_optional_mount "/aicage/host/ssh" "${AICAGE_SSH_TARGET:-}"
+if [[ -e "/aicage/host/gitconfig" ]]; then
+  mkdir -p "${TARGET_HOME}/.config/git"
+  ln -sfn "/aicage/host/gitconfig" "${TARGET_HOME}/.gitconfig"
+  ln -sfn "/aicage/host/gitconfig" "${TARGET_HOME}/.config/git/config"
+fi
+
+if [[ -e "/aicage/host/gnupg" ]]; then
+  ln -sfn "/aicage/host/gnupg" "${TARGET_HOME}/.gnupg"
+fi
+
+if [[ -e "/aicage/host/ssh" ]]; then
+  ln -sfn "/aicage/host/ssh" "${TARGET_HOME}/.ssh"
+fi
 
 export HOME="${TARGET_HOME}"
 export USER="${TARGET_USER}"

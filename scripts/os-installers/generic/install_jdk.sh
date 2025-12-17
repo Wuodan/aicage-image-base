@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if command -v java >/dev/null 2>&1; then
+if command -v javac >/dev/null 2>&1; then
   exit 0
 fi
 
@@ -31,8 +31,8 @@ jdk_json="$(
     "https://api.adoptium.net/v3/assets/feature_releases/${jdk_version}/ga?architecture=${JDK_ARCH}&heap_size=normal&image_type=jdk&jvm_impl=hotspot&os=linux&vendor=eclipse"
 )"
 
-jdk_url="$(echo "${jdk_json}" | jq -r '.[0].binary.package.link')"
-jdk_checksum="$(echo "${jdk_json}" | jq -r '.[0].binary.package.checksum')"
+jdk_url="$(echo "${jdk_json}" | jq -r '.[0].binaries[0].package.link')"
+jdk_checksum="$(echo "${jdk_json}" | jq -r '.[0].binaries[0].package.checksum')"
 
 if [[ -z "${jdk_url}" || "${jdk_url}" == "null" ]]; then
   echo "Unable to resolve JDK download URL" >&2
@@ -53,7 +53,10 @@ install_root="/opt/java"
 mkdir -p "${install_root}"
 tar -xzf "${archive_path}" -C "${install_root}"
 
-jdk_dir="$(tar -tzf "${archive_path}" | head -1 | cut -d/ -f1)"
+jdk_contents="${tmp_dir}/jdk-contents.txt"
+tar -tzf "${archive_path}" > "${jdk_contents}"
+jdk_dir="$(head -1 "${jdk_contents}")"
+jdk_dir="${jdk_dir%%/*}"
 jdk_home="${install_root}/${jdk_dir}"
 
 if [[ ! -d "${jdk_home}" ]]; then

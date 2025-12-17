@@ -4,13 +4,14 @@ set -euo pipefail
 dnf -y install \
   bash \
   bash-completion \
+  bats \
   bind-utils \
   ca-certificates \
   curl \
   dnf-plugins-core \
   file \
   git \
-  glibc-langpack-en \
+  glibc-all-langpacks \
   glibc-locale-source \
   gnupg2 \
   iproute \

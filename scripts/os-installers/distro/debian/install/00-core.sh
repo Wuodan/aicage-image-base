@@ -4,6 +4,7 @@ set -euo pipefail
 apt-get install -y --no-install-recommends \
   bash \
   bash-completion \
+  bats \
   ca-certificates \
   curl \
   dnsutils \
@@ -14,6 +15,7 @@ apt-get install -y --no-install-recommends \
   jq \
   less \
   locales \
+  locales-all \
   nano \
   netcat-openbsd \
   openssh-client \

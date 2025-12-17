@@ -3,6 +3,10 @@ set -euo pipefail
 
 dnf -y install \
   ant \
-  java-latest-openjdk-devel \
   maven \
   protobuf-compiler
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+generic_dir="${script_dir}/../../../generic"
+
+"${generic_dir}/install_jdk.sh"

@@ -1,32 +1,41 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-dnf -y makecache
-dnf -y group install development-tools
 dnf -y install \
   bash \
   bash-completion \
+  bind-utils \
   ca-certificates \
   curl \
   dnf-plugins-core \
+  file \
   git \
+  glibc-langpack-en \
+  glibc-locale-source \
   gnupg2 \
+  iproute \
   jq \
+  less \
   nano \
+  nmap-ncat \
   openssh-clients \
+  p7zip \
+  patch \
   pipx \
+  procps-ng \
   python3 \
   python3-pip \
   python3-virtualenv \
   ripgrep \
+  rsync \
+  shadow-utils \
   tar \
+  time \
   tini \
+  tree \
   unzip \
   xz \
-  zip \
-  glibc-langpack-en \
-  glibc-locale-source \
-  shadow-utils
+  zip
 
 localedef -i en_US -f UTF-8 /usr/lib/locale/en_US.UTF-8
 
@@ -46,13 +55,3 @@ if ! command -v gosu >/dev/null 2>&1; then
   curl -fsSL "${url}" -o /usr/local/bin/gosu
   chmod +x /usr/local/bin/gosu
 fi
-
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-helpers_dir="${script_dir}/helpers"
-
-"${helpers_dir}/install_node.sh"
-"${helpers_dir}/install_python.sh"
-"${helpers_dir}/install_docker_redhat.sh"
-
-# cleanup
-dnf clean all

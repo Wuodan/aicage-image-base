@@ -30,9 +30,10 @@ locale-gen en_US.UTF-8
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 helpers_dir="${script_dir}/helpers"
+generic_dir="${script_dir}/generic"
 
-"${helpers_dir}/install_node.sh"
-"${helpers_dir}/install_python.sh"
+"${generic_dir}/install_node.sh"
+"${generic_dir}/install_python.sh"
 "${helpers_dir}/install_docker_debian.sh"
 
 # cleanup

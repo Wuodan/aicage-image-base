@@ -38,7 +38,8 @@ LOCALE
 
 script_dir="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
 helpers_dir="${script_dir}/helpers"
+generic_dir="${script_dir}/generic"
 
 "${helpers_dir}/install_node_alpine.sh"
-"${helpers_dir}/install_python.sh"
+"${generic_dir}/install_python.sh"
 "${helpers_dir}/install_docker_alpine.sh"

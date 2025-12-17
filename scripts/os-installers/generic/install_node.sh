@@ -23,3 +23,7 @@ ln -sf /usr/local/bin/npm /usr/bin/npm
 ln -sf /usr/local/bin/npx /usr/bin/npx
 
 npm config set prefix /usr/local
+
+if command -v corepack >/dev/null 2>&1; then
+  corepack enable
+fi

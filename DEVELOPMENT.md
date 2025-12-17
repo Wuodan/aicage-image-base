@@ -52,7 +52,8 @@ scripts/build-all.sh
 scripts/test-all.sh
 ```
 
-Smoke suites live in `tests/smoke/`; run individual files with `bats tests/smoke/<name>.bats`.
+Smoke suites live in `tests/smoke/` (including subfolders); run individual files with
+`bats tests/smoke/<path>.bats`.
 
 ## Adding a base
 

@@ -43,5 +43,8 @@ done
 
 [[ -n "${IMAGE_REF}" ]] || { log "--image is required"; usage; }
 
+mapfile -t bats_files < <(find "${SMOKE_DIR}" -type f -name "*.bats" | sort)
+[[ ${#bats_files[@]} -gt 0 ]] || { log "No smoke tests found under ${SMOKE_DIR}"; exit 1; }
+
 log "Running base smoke tests via bats"
-AICAGE_IMAGE_BASE_IMAGE="${IMAGE_REF}" bats "${SMOKE_DIR}" "$@"
+AICAGE_IMAGE_BASE_IMAGE="${IMAGE_REF}" bats "${bats_files[@]}" "$@"

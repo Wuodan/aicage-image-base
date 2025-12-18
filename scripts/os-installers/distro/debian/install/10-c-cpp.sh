@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "CHECK LTRACE: $(apt-cache show ltrace)"
-echo "ARCH = $(uname -m)"
-
 if apt-cache show ltrace >/dev/null 2>&1; then
-  TRACE_TOOLS=strace ltrace
+  TRACE_TOOLS="strace ltrace"
 else
   TRACE_TOOLS=strace
 fi

@@ -28,11 +28,11 @@ jobs:
     env:
       BASE_ALIAS: ${{ inputs.base }}
       AICAGE_VERSION: ${{ github.ref_name }}
+      ROOT_DIR: ${{ github.workspace }}
     outputs:
       AICAGE_IMAGE_BASE_REPOSITORY: ${{ steps.config.outputs.AICAGE_IMAGE_BASE_REPOSITORY }}
       BASE_IMAGE: ${{ steps.config.outputs.BASE_IMAGE }}
       OS_INSTALLER: ${{ steps.config.outputs.OS_INSTALLER }}
-      DESCRIPTION: Base image for aicage (${BASE_ALIAS})
 
     steps:
       - name: Checkout
@@ -51,7 +51,6 @@ jobs:
         id: config
         run: |
           set -euo pipefail
-          ROOT_DIR=$PWD
           source scripts/common.sh
           load_config_file
           {
@@ -65,24 +64,17 @@ jobs:
     runs-on: ubuntu-latest
     needs: load_config
     env:
+      PLATFORM: linux/amd64
+      ARCH_SUFFIX: amd64
       BASE_ALIAS: ${{ inputs.base }}
       AICAGE_IMAGE_BASE_REPOSITORY: ${{ needs.load_config.outputs.AICAGE_IMAGE_BASE_REPOSITORY }}
       AICAGE_VERSION: ${{ github.ref_name }}
-      PLATFORM: linux/amd64
-      ARCH_SUFFIX: amd64
     outputs:
       VERSION_TAG: ${{ steps.config.outputs.VERSION_TAG }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.1
-
-      - name: Validate base alias
-        run: |
-          if [[ ! -d "bases/${BASE_ALIAS}" ]]; then
-            echo "Base '${BASE_ALIAS}' not found under bases/" >&2
-            exit 1
-          fi
 
       - name: Set config
         id: config
@@ -141,24 +133,17 @@ jobs:
     runs-on: ubuntu-24.04-arm
     needs: load_config
     env:
+      PLATFORM: linux/arm64
+      ARCH_SUFFIX: arm64
       BASE_ALIAS: ${{ inputs.base }}
       AICAGE_IMAGE_BASE_REPOSITORY: ${{ needs.load_config.outputs.AICAGE_IMAGE_BASE_REPOSITORY }}
       AICAGE_VERSION: ${{ github.ref_name }}
-      PLATFORM: linux/arm64
-      ARCH_SUFFIX: arm64
     outputs:
       VERSION_TAG: ${{ steps.config.outputs.VERSION_TAG }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.1
-
-      - name: Validate base alias
-        run: |
-          if [[ ! -d "bases/${BASE_ALIAS}" ]]; then
-            echo "Base '${BASE_ALIAS}' not found under bases/" >&2
-            exit 1
-          fi
 
       - name: Set config
         id: config

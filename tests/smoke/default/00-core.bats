@@ -7,6 +7,7 @@
       set -euo pipefail
       command -v dig
       command -v ip
+      command -v curl
       command -v rsync
       command -v tree
       command -v patch

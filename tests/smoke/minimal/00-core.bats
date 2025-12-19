@@ -5,6 +5,7 @@
     "${AICAGE_IMAGE_BASE_IMAGE}" \
     /bin/bash -c '
       set -euo pipefail
+      command -v curl
       command -v git
       command -v tini
     '

@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 
 setup() {
-  ROOT_DIR="$(cd "$(dirname "${BATS_TEST_FILENAME}")/../.." && pwd)"
+  ROOT_DIR="$(cd "$(dirname "${BATS_TEST_FILENAME}")/../../.." && pwd)"
   # shellcheck source=../../scripts/common.sh
   source "${ROOT_DIR}/scripts/common.sh"
   load_config_file

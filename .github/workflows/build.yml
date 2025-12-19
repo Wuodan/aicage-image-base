@@ -270,5 +270,33 @@ jobs:
             docker buildx imagetools inspect --raw "${tag}" | jq '.annotations'
           done
 
-            
+      - name: "Validate manifest annotations"
+        run: |
+          set -euo pipefail
+          VERSION_TAG="${AICAGE_IMAGE_REGISTRY}/${AICAGE_IMAGE_BASE_REPOSITORY}:${BASE_ALIAS}-${AICAGE_VERSION}"
+          LATEST_TAG="${AICAGE_IMAGE_REGISTRY}/${AICAGE_IMAGE_BASE_REPOSITORY}:${BASE_ALIAS}-latest"
 
+          validate_tag() {
+            local tag="$1"
+            local annotations
+            local actual_distro
+            local actual_description
+
+            annotations="$(docker buildx imagetools inspect --raw "${tag}" | jq -r '.annotations')"
+            actual_distro="$(printf '%s' "${annotations}" | jq -r '."org.aicage.distro"')"
+            actual_description="$(printf '%s' "${annotations}" | jq -r '."org.aicage.description"')"
+
+            if [[ "${actual_distro}" != "${BASE_IMAGE_DISTRO}" ]]; then
+              echo "Expected org.aicage.distro='${BASE_IMAGE_DISTRO}' on ${tag}, got '${actual_distro}'" >&2
+              exit 1
+            fi
+            if [[ "${actual_description}" != "${BASE_IMAGE_DESCRIPTION}" ]]; then
+              echo "Expected org.aicage.description='${BASE_IMAGE_DESCRIPTION}' on ${tag}, got '${actual_description}'" >&2
+              exit 1
+            fi
+          }
+
+          validate_tag "${VERSION_TAG}"
+          validate_tag "${LATEST_TAG}"
+
+            

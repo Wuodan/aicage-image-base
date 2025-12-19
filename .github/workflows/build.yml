@@ -224,8 +224,6 @@ jobs:
 
     env:
       BASE_ALIAS: ${{ inputs.base }}
-      BASE_IMAGE_DISTRO: ${{ needs.load_config.outputs.BASE_IMAGE_DISTRO }}
-      BASE_IMAGE_DESCRIPTION: ${{ needs.load_config.outputs.BASE_IMAGE_DESCRIPTION }}
       AICAGE_IMAGE_REGISTRY: ${{ needs.load_config.outputs.AICAGE_IMAGE_REGISTRY }}
       AICAGE_IMAGE_BASE_REPOSITORY: ${{ needs.load_config.outputs.AICAGE_IMAGE_BASE_REPOSITORY }}
       AICAGE_VERSION: ${{ github.ref_name }}
@@ -255,48 +253,10 @@ jobs:
           docker buildx imagetools create \
             --tag "${VERSION_TAG}" \
             --tag "${LATEST_TAG}" \
-            --annotation "index:org.opencontainers.image.description=Base image for aicage (${BASE_ALIAS})" \
-            --annotation "index:org.opencontainers.image.source=${GITHUB_SERVER_URL}/${AICAGE_IMAGE_BASE_REPOSITORY}" \
-            --annotation "index:org.aicage.base=${BASE_ALIAS}" \
-            --annotation "index:org.aicage.distro=${BASE_IMAGE_DISTRO}" \
-            --annotation "index:org.aicage.description=${BASE_IMAGE_DESCRIPTION}" \
             "${{ needs.build_amd64.outputs.VERSION_TAG }}" \
             "${{ needs.build_arm64.outputs.VERSION_TAG }}"
 
           for tag in "${VERSION_TAG}" "${LATEST_TAG}"; do
             echo "Inspect tag '${tag}':"
             docker buildx imagetools inspect "${tag}"
-            echo "Inspect annotations of tag '${tag}':"
-            docker buildx imagetools inspect --raw "${tag}" | jq '.annotations'
           done
-
-      - name: "Validate manifest annotations"
-        run: |
-          set -euo pipefail
-          VERSION_TAG="${AICAGE_IMAGE_REGISTRY}/${AICAGE_IMAGE_BASE_REPOSITORY}:${BASE_ALIAS}-${AICAGE_VERSION}"
-          LATEST_TAG="${AICAGE_IMAGE_REGISTRY}/${AICAGE_IMAGE_BASE_REPOSITORY}:${BASE_ALIAS}-latest"
-
-          validate_tag() {
-            local tag="$1"
-            local annotations
-            local actual_distro
-            local actual_description
-
-            annotations="$(docker buildx imagetools inspect --raw "${tag}" | jq -r '.annotations')"
-            actual_distro="$(printf '%s' "${annotations}" | jq -r '."org.aicage.distro"')"
-            actual_description="$(printf '%s' "${annotations}" | jq -r '."org.aicage.description"')"
-
-            if [[ "${actual_distro}" != "${BASE_IMAGE_DISTRO}" ]]; then
-              echo "Expected org.aicage.distro='${BASE_IMAGE_DISTRO}' on ${tag}, got '${actual_distro}'" >&2
-              exit 1
-            fi
-            if [[ "${actual_description}" != "${BASE_IMAGE_DESCRIPTION}" ]]; then
-              echo "Expected org.aicage.description='${BASE_IMAGE_DESCRIPTION}' on ${tag}, got '${actual_description}'" >&2
-              exit 1
-            fi
-          }
-
-          validate_tag "${VERSION_TAG}"
-          validate_tag "${LATEST_TAG}"
-
-            

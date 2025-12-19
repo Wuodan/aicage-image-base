@@ -1,2 +1,3 @@
 base_image: alpine:latest
 os_installer: distro/alpine/install.sh
+test_suite: default

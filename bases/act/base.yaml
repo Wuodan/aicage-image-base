@@ -1,2 +1,3 @@
 base_image: ghcr.io/catthehacker/ubuntu:act-latest
 os_installer: distro/debian/install.sh
+test_suite: default

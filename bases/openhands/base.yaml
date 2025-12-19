@@ -1,2 +1,3 @@
 base_image: docker.openhands.dev/openhands/runtime:latest-nikolaik
 os_installer: distro/debian/install.sh
+test_suite: default

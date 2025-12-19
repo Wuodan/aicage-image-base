@@ -1,2 +1,3 @@
 base_image: node:lts-slim
 os_installer: distro/debian/install.sh
+test_suite: default

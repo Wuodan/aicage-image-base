@@ -25,6 +25,11 @@ log() {
   printf '[base-test] %s\n' "$*" >&2
 }
 
+die() {
+  log "$*"
+  exit 1
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --image)
@@ -43,5 +48,11 @@ done
 
 [[ -n "${IMAGE_REF}" ]] || { log "--image is required"; usage; }
 
-log "Running base smoke tests via bats"
-AICAGE_IMAGE_BASE_IMAGE="${IMAGE_REF}" bats "${SMOKE_DIR}" "$@"
+if ! TEST_SUITE="$(get_base_field "${BASE_ALIAS}" test_suite)"; then
+  TEST_SUITE="default"
+fi
+[[ -n "${TEST_SUITE}" ]] || die "Test suite not defined"
+[[ -d "${SMOKE_DIR}/${TEST_SUITE}" ]] || die "Test suite folder not found"
+
+log "Running base smoke test suite '${TEST_SUITE}' via bats"
+AICAGE_IMAGE_BASE_IMAGE="${IMAGE_REF}" bats "${SMOKE_DIR}/${TEST_SUITE}" "$@"

@@ -2,7 +2,7 @@
 
 setup() {
   ROOT_DIR="$(cd "$(dirname "${BATS_TEST_FILENAME}")/../../.." && pwd)"
-  # shellcheck source=../../scripts/common.sh
+  # shellcheck source=../../../scripts/common.sh
   source "${ROOT_DIR}/scripts/common.sh"
   load_config_file
   EXPECTED_DISTRO="$(get_base_field "${BASE_ALIAS}" base_image_distro)"

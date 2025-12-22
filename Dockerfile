@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7-labs
 ARG BASE_IMAGE=ubuntu:24.04
-ARG OS_INSTALLER=os-setup_debian.sh
+ARG OS_INSTALLER
 
 FROM ${BASE_IMAGE} AS base
 

@@ -5,19 +5,17 @@ if command -v javac >/dev/null 2>&1; then
   exit 0
 fi
 
-: "${TARGETARCH:?TARGETARCH is required}"
-
 jdk_os="linux"
 . /etc/os-release
 if [[ "${ID:-}" == "alpine" ]]; then
   jdk_os="alpine-linux"
 fi
 
-case "${TARGETARCH}" in
-  amd64) JDK_ARCH="x64" ;;
-  arm64) JDK_ARCH="aarch64" ;;
+case "$(uname -m)" in
+  x86_64) JDK_ARCH="x64" ;;
+  aarch64|arm64) JDK_ARCH="aarch64" ;;
   *)
-    echo "Unsupported TARGETARCH ${TARGETARCH}" >&2
+    echo "Unsupported host architecture: $(uname -m)" >&2
     exit 1
     ;;
 esac

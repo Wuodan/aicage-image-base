@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${TARGETARCH:?TARGETARCH is required}"
-
-case "${TARGETARCH}" in
-  amd64) NODE_DIST_ARCH="x64" ;;
-  arm64) NODE_DIST_ARCH="arm64" ;;
+case "$(uname -m)" in
+  x86_64) NODE_DIST_ARCH="x64" ;;
+  aarch64|arm64) NODE_DIST_ARCH="arm64" ;;
   *)
-    echo "Unsupported TARGETARCH ${TARGETARCH}" >&2
+    echo "Unsupported host architecture: $(uname -m)" >&2
     exit 1
     ;;
 esac

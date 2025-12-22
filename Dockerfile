@@ -1,10 +1,8 @@
 # syntax=docker/dockerfile:1.7-labs
-ARG BASE_IMAGE=ubuntu:24.04
-ARG OS_INSTALLER
+ARG BASE_IMAGE
 
 FROM ${BASE_IMAGE} AS base
 
-ARG TARGETARCH
 ARG OS_INSTALLER
 
 LABEL org.opencontainers.image.title="aicage-image-base" \
@@ -13,7 +11,6 @@ LABEL org.opencontainers.image.title="aicage-image-base" \
       org.opencontainers.image.licenses="Apache-2.0"
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    AGENT_TARGETARCH=${TARGETARCH} \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
     AICAGE_USER=aicage \

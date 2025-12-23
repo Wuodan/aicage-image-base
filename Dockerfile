@@ -16,6 +16,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     AICAGE_USER=aicage \
     AICAGE_UID=1000 \
     AICAGE_GID=1000 \
+    AICAGE_WORKSPACE=/workspace \
     PIPX_HOME=/opt/pipx \
     PIPX_BIN_DIR=/opt/pipx/bin \
     PATH="/opt/pipx/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin" \

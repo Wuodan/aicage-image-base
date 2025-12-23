@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ -z "${AICAGE_WORKSPACE:-}" ]]; then
+  AICAGE_WORKSPACE="/workspace"
+fi
+
 # set up user and group
 TARGET_UID="${AICAGE_UID:-${UID:-1000}}"
 TARGET_GID="${AICAGE_GID:-${GID:-1000}}"
@@ -58,8 +62,8 @@ if [[ -n "${docker_gid_group}" ]]; then
 fi
 
 # set up workspace folder
-mkdir -p /workspace
-chown "${TARGET_UID}:${TARGET_GID}" /workspace
+mkdir -p "${AICAGE_WORKSPACE}"
+chown "${TARGET_UID}:${TARGET_GID}" "${AICAGE_WORKSPACE}"
 chown -R "${TARGET_UID}:${TARGET_GID}" "${TARGET_HOME}"
 
 TOOL_MOUNT="/aicage/tool-config"
@@ -92,7 +96,7 @@ export HOME="${TARGET_HOME}"
 export USER="${TARGET_USER}"
 export PATH="${HOME}/.local/bin:${PATH}"
 
-cd /workspace
+cd "${AICAGE_WORKSPACE}"
 
 # switch to user
 exec gosu "${TARGET_UID}" "$@"

@@ -30,4 +30,5 @@ dnf -y install \
   tree \
   unzip \
   xz \
+  yq \
   zip

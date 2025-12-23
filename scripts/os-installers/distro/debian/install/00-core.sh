@@ -27,4 +27,5 @@ apt-get install -y --no-install-recommends \
   tree \
   unzip \
   xz-utils \
+  yq \
   zip

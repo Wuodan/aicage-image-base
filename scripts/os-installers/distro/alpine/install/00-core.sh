@@ -29,6 +29,7 @@ apk add --no-cache \
   tree \
   unzip \
   xz \
+  yq \
   zip
 
 update-ca-certificates >/dev/null 2>&1

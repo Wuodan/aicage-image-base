@@ -41,6 +41,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: "Test: Set up Python"
+        uses: actions/setup-python@v6.1.0
+        with:
+          python-version: "3.x"
+
+      - name: "Test: Install lint deps"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: "Test: Run linters (yamllint, ruff, pymarkdown)"
+        run: |
+          yamllint .
+          ruff check .
+          pymarkdown --config .pymarkdown.json scan .
+
+      - name: "Test: Validate config and base with schemas"
+        run: |
+          check-jsonschema \
+            --schemafile doc/validation/config.schema.json \
+            config.yaml
+          check-jsonschema \
+            --schemafile doc/validation/base.schema.json \
+            "bases/${BASE_ALIAS}/base.yaml"
+
       - name: Validate base alias
         shell: bash
         run: |

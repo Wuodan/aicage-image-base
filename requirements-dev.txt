@@ -3,6 +3,7 @@
 pymarkdownlnt
 pytest
 pytest-cov
+check-jsonschema
 ruff
 yamllint
 yq

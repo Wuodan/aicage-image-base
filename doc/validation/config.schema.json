@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AICAGE base config",
+  "type": "object",
+  "required": [
+    "AICAGE_IMAGE_REGISTRY",
+    "AICAGE_IMAGE_BASE_REPOSITORY",
+    "AICAGE_VERSION"
+  ],
+  "properties": {
+    "AICAGE_IMAGE_REGISTRY": {
+      "type": "string"
+    },
+    "AICAGE_IMAGE_BASE_REPOSITORY": {
+      "type": "string"
+    },
+    "AICAGE_VERSION": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

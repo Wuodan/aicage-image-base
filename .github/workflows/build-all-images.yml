@@ -45,5 +45,5 @@ jobs:
           for dir in bases/*; do
             BASE_ALIAS="$(basename "${dir}")"
             echo "Dispatching ${BASE_ALIAS} for ${REF}"
-            gh workflow run build.yml --ref "${REF}" -f base="${BASE_ALIAS}"
+            gh workflow run build-image.yml --ref "${REF}" -f base="${BASE_ALIAS}"
           done

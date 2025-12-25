@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7-labs
-ARG BASE_IMAGE
+ARG ROOT_IMAGE
 
-FROM ${BASE_IMAGE} AS base
+FROM ${ROOT_IMAGE} AS root_image
 
 ARG OS_INSTALLER
 

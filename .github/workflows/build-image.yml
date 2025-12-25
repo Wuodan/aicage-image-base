@@ -32,7 +32,7 @@ jobs:
     outputs:
       AICAGE_IMAGE_REGISTRY: ${{ steps.config.outputs.AICAGE_IMAGE_REGISTRY }}
       AICAGE_IMAGE_BASE_REPOSITORY: ${{ steps.config.outputs.AICAGE_IMAGE_BASE_REPOSITORY }}
-      BASE_IMAGE: ${{ steps.config.outputs.BASE_IMAGE }}
+      ROOT_IMAGE: ${{ steps.config.outputs.ROOT_IMAGE }}
       BASE_IMAGE_DISTRO: ${{ steps.config.outputs.BASE_IMAGE_DISTRO }}
       BASE_IMAGE_DESCRIPTION: ${{ steps.config.outputs.BASE_IMAGE_DESCRIPTION }}
       OS_INSTALLER: ${{ steps.config.outputs.OS_INSTALLER }}
@@ -59,7 +59,7 @@ jobs:
           {
             echo "AICAGE_IMAGE_REGISTRY=${AICAGE_IMAGE_REGISTRY}"
             echo "AICAGE_IMAGE_BASE_REPOSITORY=${AICAGE_IMAGE_BASE_REPOSITORY}"
-            echo "BASE_IMAGE=$(get_base_field "${BASE_ALIAS}" base_image)"
+            echo "ROOT_IMAGE=$(get_base_field "${BASE_ALIAS}" root_image)"
             echo "BASE_IMAGE_DISTRO=$(get_base_field "${BASE_ALIAS}" base_image_distro)"
             echo "BASE_IMAGE_DESCRIPTION=$(get_base_field "${BASE_ALIAS}" base_image_description)"
             echo "OS_INSTALLER=$(get_base_field "${BASE_ALIAS}" os_installer)"
@@ -115,7 +115,7 @@ jobs:
           push: false
           load: true
           build-args: |
-            BASE_IMAGE=${{ needs.load_config.outputs.BASE_IMAGE }}
+            ROOT_IMAGE=${{ needs.load_config.outputs.ROOT_IMAGE }}
             OS_INSTALLER=${{ needs.load_config.outputs.OS_INSTALLER }}
           tags: |
             ${{ steps.config.outputs.VERSION_TAG }}

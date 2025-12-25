@@ -58,7 +58,7 @@ done
 
 load_config_file
 
-BASE_IMAGE="$(get_base_field "${BASE_ALIAS}" base_image)"
+ROOT_IMAGE="$(get_base_field "${BASE_ALIAS}" root_image)"
 BASE_IMAGE_DISTRO="$(get_base_field "${BASE_ALIAS}" base_image_distro)"
 BASE_IMAGE_DESCRIPTION="$(get_base_field "${BASE_ALIAS}" base_image_description)"
 OS_INSTALLER="$(get_base_field "${BASE_ALIAS}" os_installer)"
@@ -69,13 +69,13 @@ VERSION_TAG="${AICAGE_IMAGE_REGISTRY}/${AICAGE_IMAGE_BASE_REPOSITORY}:${BASE_ALI
 LATEST_TAG="${AICAGE_IMAGE_REGISTRY}/${AICAGE_IMAGE_BASE_REPOSITORY}:${BASE_ALIAS}-latest"
 
 (
- echo "UpstreamBase=${BASE_IMAGE}"
+echo "UpstreamBase=${ROOT_IMAGE}"
  echo "Installer=${OS_INSTALLER}"
  echo "Tags=${VERSION_TAG},${LATEST_TAG}"
 ) >&2
 
 docker build \
-  --build-arg "BASE_IMAGE=${BASE_IMAGE}" \
+  --build-arg "ROOT_IMAGE=${ROOT_IMAGE}" \
   --build-arg "OS_INSTALLER=${OS_INSTALLER}" \
   --tag "${VERSION_TAG}" \
   --tag "${LATEST_TAG}" \

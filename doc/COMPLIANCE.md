@@ -40,7 +40,7 @@ These are installed outside the base OS package managers and need license notice
 - Distro packages: license texts should remain available under distro-managed locations because we do
   not remove `/usr/share/doc` or `/usr/share/licenses`.
 - Non-distro installs: some license texts live in their install roots; rustup is copied into
-  `/usr/share/licenses/<tool>`.
+  `/usr/share/licenses/<agent>`.
 - No high-attention licenses (AGPL/SSPL/Elastic/commercial EULA) were found in the non-distro list
   above; JDK is GPL-2.0 with Classpath Exception.
 

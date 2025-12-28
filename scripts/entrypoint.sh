@@ -138,16 +138,16 @@ if [ -d "${TARGET_HOME}" ]; then
   fi
 fi
 
-TOOL_MOUNT="/aicage/tool-config"
-if [[ -n "${AICAGE_TOOL_PATH:-}" ]]; then
-  target_path="${AICAGE_TOOL_PATH}"
+AICAGE_AGENT_CONFIG_MOUNT="/aicage/agent-config"
+if [[ -n "${AICAGE_AGENT_CONFIG_PATH:-}" ]]; then
+  target_path="${AICAGE_AGENT_CONFIG_PATH}"
   if [[ "${target_path}" == "~/"* ]]; then
     target_path="${TARGET_HOME}/${target_path:2}"
   elif [[ "${target_path:0:1}" != "/" ]]; then
     target_path="${TARGET_HOME}/${target_path}"
   fi
   mkdir -p "$(dirname "${target_path}")"
-  ln -sfn "${TOOL_MOUNT}" "${target_path}"
+  ln -sfn "${AICAGE_AGENT_CONFIG_MOUNT}" "${target_path}"
 fi
 
 if [[ -e "/aicage/host/gitconfig" ]]; then

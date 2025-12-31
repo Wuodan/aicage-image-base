@@ -39,10 +39,10 @@ Base aliases come from folders under `bases/`.
 
 ```bash
 # Build and load a single base
-scripts/util/build.sh --base ubuntu
+scripts/debug/build.sh --base ubuntu
 
 # Build all bases (platforms from config/environment)
-scripts/util/build-all.sh
+scripts/debug/build-all.sh
 ```
 
 ## Test

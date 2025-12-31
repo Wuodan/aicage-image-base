@@ -18,8 +18,7 @@ Options:
   -h, --help           Show this help and exit
 
 Examples:
-  scripts/build.sh --base ubuntu:24.04
-  scripts/build.sh --base ghcr.io/catthehacker/ubuntu:act-latest
+  scripts/build.sh --base ubuntu
 USAGE
   exit 1
 }
@@ -66,7 +65,7 @@ OS_INSTALLER_PATH="${ROOT_DIR}/scripts/os-installers/${OS_INSTALLER}"
 [[ -f "${OS_INSTALLER_PATH}" ]] || die "OS installer not found for '${BASE_ALIAS}': ${OS_INSTALLER}"
 
 VERSION_TAG="${AICAGE_IMAGE_REGISTRY}/${AICAGE_IMAGE_BASE_REPOSITORY}:${BASE_ALIAS}-${AICAGE_VERSION}"
-LATEST_TAG="${AICAGE_IMAGE_REGISTRY}/${AICAGE_IMAGE_BASE_REPOSITORY}:${BASE_ALIAS}-latest"
+LATEST_TAG="${AICAGE_IMAGE_REGISTRY}/${AICAGE_IMAGE_BASE_REPOSITORY}:${BASE_ALIAS}"
 
 (
 echo "UpstreamBase=${ROOT_IMAGE}"

@@ -30,8 +30,9 @@ jobs:
       AICAGE_VERSION: ${{ github.ref_name }}
       ROOT_DIR: ${{ github.workspace }}
     outputs:
-      AICAGE_IMAGE_REGISTRY: ${{ steps.config.outputs.AICAGE_IMAGE_REGISTRY }}
-      AICAGE_IMAGE_BASE_REPOSITORY: ${{ steps.config.outputs.AICAGE_IMAGE_BASE_REPOSITORY }}
+      IMAGE_NAME: ${{ steps.config.outputs.IMAGE_NAME }}
+      MANIFEST_VERSION_TAG: ${{ steps.config.outputs.MANIFEST_VERSION_TAG }}
+      MANIFEST_LATEST_TAG: ${{ steps.config.outputs.MANIFEST_LATEST_TAG }}
       ROOT_IMAGE: ${{ steps.config.outputs.ROOT_IMAGE }}
       BASE_IMAGE_DISTRO: ${{ steps.config.outputs.BASE_IMAGE_DISTRO }}
       BASE_IMAGE_DESCRIPTION: ${{ steps.config.outputs.BASE_IMAGE_DESCRIPTION }}
@@ -85,9 +86,13 @@ jobs:
           set -euo pipefail
           source scripts/common.sh
           load_config_file
+          IMAGE_NAME="${AICAGE_IMAGE_REGISTRY}/${AICAGE_IMAGE_BASE_REPOSITORY}"
+          MANIFEST_VERSION_TAG="${IMAGE_NAME}:${BASE_ALIAS}-${AICAGE_VERSION}"
+          MANIFEST_LATEST_TAG="${IMAGE_NAME}:${BASE_ALIAS}"
           {
-            echo "AICAGE_IMAGE_REGISTRY=${AICAGE_IMAGE_REGISTRY}"
-            echo "AICAGE_IMAGE_BASE_REPOSITORY=${AICAGE_IMAGE_BASE_REPOSITORY}"
+            echo "IMAGE_NAME=${IMAGE_NAME}"
+            echo "MANIFEST_VERSION_TAG=${MANIFEST_VERSION_TAG}"
+            echo "MANIFEST_LATEST_TAG=${MANIFEST_LATEST_TAG}"
             echo "ROOT_IMAGE=$(get_base_field "${BASE_ALIAS}" root_image)"
             echo "BASE_IMAGE_DISTRO=$(get_base_field "${BASE_ALIAS}" base_image_distro)"
             echo "BASE_IMAGE_DESCRIPTION=$(get_base_field "${BASE_ALIAS}" base_image_description)"
@@ -127,7 +132,7 @@ jobs:
         run: |
           set -euo pipefail
           VERSION_TAG="${AICAGE_IMAGE_REGISTRY}/${AICAGE_IMAGE_BASE_REPOSITORY}:${BASE_ALIAS}-${ARCH_SUFFIX}-${AICAGE_VERSION}"
-          LATEST_TAG="${AICAGE_IMAGE_REGISTRY}/${AICAGE_IMAGE_BASE_REPOSITORY}:${BASE_ALIAS}-${ARCH_SUFFIX}-latest"
+          LATEST_TAG="${AICAGE_IMAGE_REGISTRY}/${AICAGE_IMAGE_BASE_REPOSITORY}:${BASE_ALIAS}-${ARCH_SUFFIX}"
           {
             echo "VERSION_TAG=${VERSION_TAG}"
             echo "LATEST_TAG=${LATEST_TAG}"
@@ -206,7 +211,7 @@ jobs:
         run: |
           set -euo pipefail
           VERSION_TAG="${AICAGE_IMAGE_REGISTRY}/${AICAGE_IMAGE_BASE_REPOSITORY}:${BASE_ALIAS}-${AICAGE_VERSION}"
-          LATEST_TAG="${AICAGE_IMAGE_REGISTRY}/${AICAGE_IMAGE_BASE_REPOSITORY}:${BASE_ALIAS}-latest"
+          LATEST_TAG="${AICAGE_IMAGE_REGISTRY}/${AICAGE_IMAGE_BASE_REPOSITORY}:${BASE_ALIAS}"
 
           docker buildx imagetools create \
             --tag "${VERSION_TAG}" \

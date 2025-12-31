@@ -65,4 +65,4 @@ Smoke suites live in `tests/smoke/` (including subfolders); run individual files
 ## CI
 
 `aicage-image-base/.github/workflows/build-<alias>.yml` builds and publishes base images (multi-arch)
-on tags, producing `<alias>-<version>` and `<alias>-latest` tags.
+on tags, producing `<alias>-<version>` and `<alias>` tags.

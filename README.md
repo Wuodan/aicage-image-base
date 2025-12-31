@@ -8,12 +8,16 @@ images in [aicage/aicage-image](https://github.com/aicage/aicage-image) build on
 - Base aliases such as `ubuntu`, `fedora`, and `act`, each defined under `bases/<alias>/`.
 - Multi-arch support: `linux/amd64` and `linux/arm64`.
 
-## Tag format
+## Tag formats
 
-`${AICAGE_BASE_REPOSITORY:-aicage/aicage-image-base}:<base>-<version>`
+- `${AICAGE_BASE_REPOSITORY:-aicage/aicage-image-base}:<base>`
+- `${AICAGE_BASE_REPOSITORY:-aicage/aicage-image-base}:<base>-<aicage_version>`
 
-- Example: `aicage/aicage-image-base:ubuntu-latest`
-- `<base>-latest` tags are convenience aliases for the newest published version of a base.
+Example:
+- `aicage/aicage-image-base:ubuntu`
+- `aicage/aicage-image-base:ubuntu-0.0.1`
+
+`<base>` tags are convenience aliases for the newest published version of a base.
 
 ## Contributing
 

@@ -4,15 +4,13 @@ run-name: Build base images (${{ github.ref_name }})
 "on":
   schedule:
     - cron: "0 2 * * 2"
+  workflow_call: {}
   workflow_dispatch:
     inputs:
       base:
         description: Base alias to build (matches bases/<alias>)
         required: false
         type: string
-  push:
-    tags:
-      - "*"
 
 concurrency:
   group: build-base-images-${{ github.run_id }}

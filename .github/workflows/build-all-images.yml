@@ -74,6 +74,7 @@ jobs:
           echo "Git ref: ${GIT_REF}"
 
   lint:
+    name: Lint for ${{ needs.resolve-ref.outputs.GIT_REF }}
     runs-on: ubuntu-latest
     needs: resolve-ref
     steps:
@@ -112,7 +113,7 @@ jobs:
             bases/*/base.yaml
 
   matrix:
-    name: Build matrix
+    name: Build matrix for ${{ needs.resolve-ref.outputs.GIT_REF }}
     runs-on: ubuntu-latest
     needs: resolve-ref
     env:
@@ -189,7 +190,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   build:
-    name: "${{ matrix.arch }}: Build, test, and publish ${{ matrix.base }}"
+    name: "${{ matrix.arch }}: Build, test, and publish ${{ matrix.base }} for ${{ needs.resolve-ref.outputs.GIT_REF }}"
     runs-on: ${{ matrix.runner }}
     needs: [lint, matrix, resolve-ref]
     strategy:
@@ -327,7 +328,7 @@ jobs:
           retention-days: 1
 
   manifest:
-    name: Publish multi-arch manifest ${{ matrix.base }}
+    name: Publish multi-arch manifest ${{ matrix.base }} for ${{ needs.resolve-ref.outputs.GIT_REF }}
     runs-on: ubuntu-latest
     needs: [build, matrix, resolve-ref]
     strategy:

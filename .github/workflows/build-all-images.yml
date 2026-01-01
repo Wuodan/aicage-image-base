@@ -1,32 +1,57 @@
-name: Build All Base Images
+name: Build Base Images
+run-name: Build base images (${{ github.ref_name }})
 
 "on":
-  push:
-    tags:
-      - "*"
+  workflow_run:
+    workflows:
+      - Release
+    types:
+      - completed
   schedule:
     - cron: "0 2 * * 2"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      base:
+        description: Base alias to build (matches bases/<alias>)
+        required: false
+        type: string
 
 concurrency:
-  group: build-all
-  cancel-in-progress: true
+  group: build-base-images-${{ github.run_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
 
 jobs:
 
-  latest-release-tag:
+  resolve-ref:
     runs-on: ubuntu-latest
-    env:
-      GIT_REF: ${{ github.ref }}
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     outputs:
-      GIT_REF: ${{ steps.config.outputs.GIT_REF }}
+      GIT_REF: ${{ steps.ref.outputs.GIT_REF }}
     steps:
-      - name: "Config: Get tag of latest release"
-        id: config
+      - name: Checkout
+        if: ${{ github.event_name == 'workflow_run' }}
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Resolve git ref
+        id: ref
         run: |
           set -euo pipefail
-
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_run" ]]; then
+            git fetch --tags --force
+            tags="$(git tag --points-at "${GITHUB_SHA}")"
+            if [[ -z "${tags}" ]]; then
+              echo "No tag found for ${GITHUB_SHA}" >&2
+              exit 1
+            fi
+            GIT_REF="$(printf '%s\n' "${tags}" | tail -n 1)"
+          else
             GIT_REF="$(
               curl \
                 -fsSL \
@@ -35,31 +60,27 @@ jobs:
                 --retry-delay 2 \
                 --max-time 300 \
                 -H "Accept: application/vnd.github+json" \
-                https://api.github.com/repos/aicage/aicage-image/releases/latest \
-              | jq -r '.tag_name' \
+                https://api.github.com/repos/aicage/aicage-image-base/releases/latest \
+              | jq -r '.tag_name'
             )"
-          fi
-          if [[ -z "${GIT_REF}" ]]; then
-            echo "Git tag is empty for latest release" >&2
-            exit 1
+            if [[ -z "${GIT_REF}" ]]; then
+              echo "Git tag is empty for latest release" >&2
+              exit 1
+            fi
           fi
           {
             echo "GIT_REF=${GIT_REF}"
           } >> "$GITHUB_OUTPUT"
-          echo "Latest release tag: ${GIT_REF}"
+          echo "Git ref: ${GIT_REF}"
 
-  dispatch:
-    name: Dispatch base builds for ${{ needs.latest-release-tag.outputs.GIT_REF }}
+  lint:
     runs-on: ubuntu-latest
-    needs: latest-release-tag
-    env:
-      GH_TOKEN: ${{ github.token }}
-      GIT_REF: ${{ needs.latest-release-tag.outputs.GIT_REF }}
+    needs: resolve-ref
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.1
+        uses: actions/checkout@v6
         with:
-          ref: ${{ needs.latest-release-tag.outputs.GIT_REF }}
+          ref: ${{ needs.resolve-ref.outputs.GIT_REF }}
 
       - name: "Test: Set up Python"
         uses: actions/setup-python@v6.1.0
@@ -90,11 +111,334 @@ jobs:
             --schemafile doc/validation/base.schema.json \
             bases/*/base.yaml
 
-      - name: Dispatch per-base builds
+  matrix:
+    name: Build matrix
+    runs-on: ubuntu-latest
+    needs: resolve-ref
+    env:
+      INPUT_BASE: ${{ github.event.inputs.base }}
+    outputs:
+      MATRIX_IMAGES: ${{ steps.set-matrix.outputs.MATRIX_IMAGES }}
+      MATRIX_MANIFESTS: ${{ steps.set-matrix.outputs.MATRIX_MANIFESTS }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.resolve-ref.outputs.GIT_REF }}
+
+      - name: Generate build matrix
+        id: set-matrix
         run: |
           set -euo pipefail
-          for dir in bases/*; do
-            BASE_ALIAS="$(basename "${dir}")"
-            echo "Dispatching ${BASE_ALIAS} for ${GIT_REF}"
-            gh workflow run build-image.yml --ref "${GIT_REF}" -f base="${BASE_ALIAS}"
+          base_input="${INPUT_BASE}"
+          bases=()
+          if [[ -n "${base_input}" ]]; then
+            if [[ ! -d "bases/${base_input}" ]]; then
+              echo "Base '${base_input}' not found under bases/" >&2
+              exit 1
+            fi
+            bases=("${base_input}")
+          else
+            mapfile -t bases < <(ls -1 bases)
+          fi
+
+          images_file="$(mktemp)"
+          manifests_file="$(mktemp)"
+          echo '{"include":[]}' > "${images_file}"
+          echo '{"include":[]}' > "${manifests_file}"
+
+          for base_alias in "${bases[@]}"; do
+            jq -c \
+              --arg base "${base_alias}" \
+              '
+                .include += [
+                  {
+                    "base": $base,
+                    "arch": "amd64",
+                    "platform": "linux/amd64",
+                    "runner": "ubuntu-latest"
+                  },
+                  {
+                    "base": $base,
+                    "arch": "arm64",
+                    "platform": "linux/arm64",
+                    "runner": "ubuntu-24.04-arm"
+                  }
+                ]
+              ' \
+              "${images_file}" > "${images_file}.tmp"
+            mv "${images_file}.tmp" "${images_file}"
+
+            jq -c \
+              --arg base "${base_alias}" \
+              '.include += [{"base": $base}]' \
+              "${manifests_file}" > "${manifests_file}.tmp"
+            mv "${manifests_file}.tmp" "${manifests_file}"
           done
+
+          echo "Image matrix:"
+          jq '.' "${images_file}"
+          echo "Manifest matrix:"
+          jq '.' "${manifests_file}"
+
+          images_json="$(cat "${images_file}")"
+          manifests_json="$(cat "${manifests_file}")"
+          {
+            echo "MATRIX_IMAGES=${images_json}"
+            echo "MATRIX_MANIFESTS=${manifests_json}"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    name: "${{ matrix.arch }}: Build, test, and publish ${{ matrix.base }}"
+    runs-on: ${{ matrix.runner }}
+    needs: [lint, matrix, resolve-ref]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.matrix.outputs.MATRIX_IMAGES) }}
+    env:
+      PLATFORM: ${{ matrix.platform }}
+      ARCH_SUFFIX: ${{ matrix.arch }}
+      BASE_ALIAS: ${{ matrix.base }}
+      ROOT_DIR: ${{ github.workspace }}
+      AICAGE_VERSION: ${{ needs.resolve-ref.outputs.GIT_REF }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.1
+        with:
+          ref: ${{ needs.resolve-ref.outputs.GIT_REF }}
+
+      - name: Load config file
+        id: config
+        run: |
+          set -euo pipefail
+          source scripts/common.sh
+          load_config_file
+          IMAGE_NAME="${AICAGE_IMAGE_REGISTRY}/${AICAGE_IMAGE_BASE_REPOSITORY}"
+          MANIFEST_VERSION_TAG="${IMAGE_NAME}:${BASE_ALIAS}-${AICAGE_VERSION}"
+          MANIFEST_LATEST_TAG="${IMAGE_NAME}:${BASE_ALIAS}"
+          IMAGE_VERSION_TAG="${MANIFEST_VERSION_TAG}-${ARCH_SUFFIX}"
+          IMAGE_LATEST_TAG="${MANIFEST_LATEST_TAG}-${ARCH_SUFFIX}"
+          IMAGE_TEST_TAG="${IMAGE_VERSION_TAG}-test"
+          {
+            echo "IMAGE_NAME=${IMAGE_NAME}"
+            echo "IMAGE_VERSION_TAG=${IMAGE_VERSION_TAG}"
+            echo "IMAGE_LATEST_TAG=${IMAGE_LATEST_TAG}"
+            echo "IMAGE_TEST_TAG=${IMAGE_TEST_TAG}"
+            echo "ROOT_IMAGE=$(get_base_field "${BASE_ALIAS}" root_image)"
+            echo "OS_INSTALLER=$(get_base_field "${BASE_ALIAS}" os_installer)"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "IMAGE_NAME=${IMAGE_NAME}"
+            echo "IMAGE_VERSION_TAG=${IMAGE_VERSION_TAG}"
+            echo "IMAGE_LATEST_TAG=${IMAGE_LATEST_TAG}"
+            echo "IMAGE_TEST_TAG=${IMAGE_TEST_TAG}"
+            echo "ROOT_IMAGE=$(get_base_field "${BASE_ALIAS}" root_image)"
+            echo "OS_INSTALLER=$(get_base_field "${BASE_ALIAS}" os_installer)"
+          } >> "$GITHUB_ENV"
+
+      - name: "Set up Buildx"
+        uses: docker/setup-buildx-action@v3.11.1
+        with:
+          driver: docker-container
+
+      - name: "Log in to Docker Hub"
+        uses: docker/login-action@v3.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build test image tag
+        id: build_image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          provenance: true
+          cache-from: type=gha,scope=${{ env.BASE_ALIAS }}-${{ env.ARCH_SUFFIX }}
+          cache-to: type=gha,mode=max,scope=${{ env.BASE_ALIAS }}-${{ env.ARCH_SUFFIX }}
+          build-args: |
+            ROOT_IMAGE=${{ env.ROOT_IMAGE }}
+            OS_INSTALLER=${{ env.OS_INSTALLER }}
+          tags: |
+            ${{ env.IMAGE_TEST_TAG }}
+          labels: |
+            org.opencontainers.image.description=Base image for aicage (${{ env.BASE_ALIAS }})
+
+      - name: "Test: Pull base image for local tests"
+        run: |
+          set -euo pipefail
+          docker pull "${IMAGE_NAME}@${{ steps.build_image.outputs.digest }}"
+
+      - name: "Test: Setup BATS testing framework"
+        uses: mig4/setup-bats@v1.2.0
+
+      - name: "Test: Run smoke suites on base image"
+        run: |
+          set -euo pipefail
+          scripts/test.sh \
+            --image "${IMAGE_NAME}@${{ steps.build_image.outputs.digest }}" \
+            --base "${BASE_ALIAS}"
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v4.0.0
+
+      - name: Sign image with cosign
+        run: |
+          set -euo pipefail
+          cosign sign --yes \
+            "${IMAGE_NAME}@${{ steps.build_image.outputs.digest }}"
+
+      - name: Verify image signature
+        run: |
+          set -euo pipefail
+          cosign verify \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            --certificate-identity-regexp \
+              "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/.*@refs/.*/.*$" \
+            "${IMAGE_NAME}@${{ steps.build_image.outputs.digest }}"
+
+      - name: "Publish: Set architecture-specific image tag"
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create \
+            --tag "${IMAGE_VERSION_TAG}" \
+            --tag "${IMAGE_LATEST_TAG}" \
+            "${IMAGE_NAME}@${{ steps.build_image.outputs.digest }}"
+
+      - name: Install ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Delete test image tag
+        run: |
+          set -euo pipefail
+          oras manifest delete "${IMAGE_TEST_TAG}"
+
+      - name: Save image digest
+        run: |
+          set -euo pipefail
+          printf '%s\n' "${{ steps.build_image.outputs.digest }}" > digest.txt
+
+      - name: Upload image digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.base }}-${{ matrix.arch }}
+          path: digest.txt
+          retention-days: 1
+
+  manifest:
+    name: Publish multi-arch manifest ${{ matrix.base }}
+    runs-on: ubuntu-latest
+    needs: [build, matrix, resolve-ref]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.matrix.outputs.MATRIX_MANIFESTS) }}
+    env:
+      BASE_ALIAS: ${{ matrix.base }}
+      ROOT_DIR: ${{ github.workspace }}
+      AICAGE_VERSION: ${{ needs.resolve-ref.outputs.GIT_REF }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.1
+        with:
+          ref: ${{ needs.resolve-ref.outputs.GIT_REF }}
+
+      - name: Load config file
+        id: config
+        run: |
+          set -euo pipefail
+          source scripts/common.sh
+          load_config_file
+          IMAGE_NAME="${AICAGE_IMAGE_REGISTRY}/${AICAGE_IMAGE_BASE_REPOSITORY}"
+          MANIFEST_VERSION_TAG="${IMAGE_NAME}:${BASE_ALIAS}-${AICAGE_VERSION}"
+          MANIFEST_LATEST_TAG="${IMAGE_NAME}:${BASE_ALIAS}"
+          MANIFEST_TEST_TAG="${MANIFEST_VERSION_TAG}-test"
+          {
+            echo "IMAGE_NAME=${IMAGE_NAME}"
+            echo "MANIFEST_VERSION_TAG=${MANIFEST_VERSION_TAG}"
+            echo "MANIFEST_LATEST_TAG=${MANIFEST_LATEST_TAG}"
+            echo "MANIFEST_TEST_TAG=${MANIFEST_TEST_TAG}"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "IMAGE_NAME=${IMAGE_NAME}"
+            echo "MANIFEST_VERSION_TAG=${MANIFEST_VERSION_TAG}"
+            echo "MANIFEST_LATEST_TAG=${MANIFEST_LATEST_TAG}"
+            echo "MANIFEST_TEST_TAG=${MANIFEST_TEST_TAG}"
+          } >> "$GITHUB_ENV"
+
+      - name: Download amd64 digest
+        uses: actions/download-artifact@v4
+        with:
+          name: digest-${{ matrix.base }}-amd64
+          path: digest/amd64
+
+      - name: Download arm64 digest
+        uses: actions/download-artifact@v4
+        with:
+          name: digest-${{ matrix.base }}-arm64
+          path: digest/arm64
+
+      - name: Load digests
+        run: |
+          set -euo pipefail
+          DIGEST_AMD64="$(cat digest/amd64/digest.txt)"
+          DIGEST_ARM64="$(cat digest/arm64/digest.txt)"
+          {
+            echo "AICAGE_IMAGE_DIGEST_amd64=${DIGEST_AMD64}"
+            echo "AICAGE_IMAGE_DIGEST_arm64=${DIGEST_ARM64}"
+          } >> "$GITHUB_ENV"
+
+      - name: "Set up Buildx"
+        uses: docker/setup-buildx-action@v3.11.1
+        with:
+          driver: docker-container
+
+      - name: "Log in to Docker Hub"
+        uses: docker/login-action@v3.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "Publish: Create and push multi-arch manifest"
+        id: build_manifest
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create \
+              --tag "${MANIFEST_TEST_TAG}" \
+              "${AICAGE_IMAGE_DIGEST_amd64}" \
+              "${AICAGE_IMAGE_DIGEST_arm64}"
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v4.0.0
+
+      - name: "Publish: Sign multi-arch manifest"
+        run: |
+          set -euo pipefail
+          cosign sign --yes \
+            "${MANIFEST_TEST_TAG}"
+
+      - name: "Test: Verify multi-arch manifest signature"
+        run: |
+          set -euo pipefail
+          cosign verify \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            --certificate-identity-regexp \
+              "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/.*@refs/.*/.*$" \
+            "${MANIFEST_TEST_TAG}"
+
+      - name: "Publish: Set tags for multi-arch manifest"
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create \
+            --tag "${MANIFEST_VERSION_TAG}" \
+            --tag "${MANIFEST_LATEST_TAG}" \
+            "${MANIFEST_TEST_TAG}"
+
+      - name: Install ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Delete test image tag
+        run: |
+          set -euo pipefail
+          oras manifest delete "${MANIFEST_TEST_TAG}"

@@ -8,6 +8,7 @@
       command -v node
       command -v npm
       command -v corepack
+      command -v xdg-open
     '
   [ "$status" -eq 0 ]
 }

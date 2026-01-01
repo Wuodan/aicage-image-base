@@ -42,3 +42,20 @@ npm config set prefix /usr/local
 if command -v corepack >/dev/null 2>&1; then
   corepack enable
 fi
+
+# xdg-utils: provides xdg-open; needed by some npm-installed CLI agents (auth/docs URL open)
+if ! command -v xdg-open >/dev/null 2>&1; then
+  if command -v apt-get >/dev/null 2>&1; then
+    apt-get update && apt-get install -y --no-install-recommends xdg-utils
+  elif command -v dnf >/dev/null 2>&1; then
+    dnf install -y xdg-utils
+  elif command -v yum >/dev/null 2>&1; then
+    yum install -y xdg-utils
+  elif command -v zypper >/dev/null 2>&1; then
+    zypper -n in xdg-utils
+  elif command -v pacman >/dev/null 2>&1; then
+    pacman -Sy --noconfirm xdg-utils
+  elif command -v apk >/dev/null 2>&1; then
+    apk add --no-cache xdg-utils
+  fi
+fi

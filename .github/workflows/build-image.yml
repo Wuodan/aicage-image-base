@@ -39,8 +39,6 @@ jobs:
       MANIFEST_LATEST_TAG: ${{ steps.config.outputs.MANIFEST_LATEST_TAG }}
       MANIFEST_TEST_TAG: ${{ steps.config.outputs.MANIFEST_TEST_TAG }}
       ROOT_IMAGE: ${{ steps.config.outputs.ROOT_IMAGE }}
-      BASE_IMAGE_DISTRO: ${{ steps.config.outputs.BASE_IMAGE_DISTRO }}
-      BASE_IMAGE_DESCRIPTION: ${{ steps.config.outputs.BASE_IMAGE_DESCRIPTION }}
       OS_INSTALLER: ${{ steps.config.outputs.OS_INSTALLER }}
 
     steps:
@@ -101,8 +99,6 @@ jobs:
             echo "MANIFEST_LATEST_TAG=${MANIFEST_LATEST_TAG}"
             echo "MANIFEST_TEST_TAG=${MANIFEST_TEST_TAG}"
             echo "ROOT_IMAGE=$(get_base_field "${BASE_ALIAS}" root_image)"
-            echo "BASE_IMAGE_DISTRO=$(get_base_field "${BASE_ALIAS}" base_image_distro)"
-            echo "BASE_IMAGE_DESCRIPTION=$(get_base_field "${BASE_ALIAS}" base_image_description)"
             echo "OS_INSTALLER=$(get_base_field "${BASE_ALIAS}" os_installer)"
           } >> "$GITHUB_OUTPUT"
 
@@ -127,8 +123,6 @@ jobs:
       IMAGE_NAME: ${{ needs.load_config.outputs.IMAGE_NAME }}
       MANIFEST_VERSION_TAG: ${{ needs.load_config.outputs.MANIFEST_VERSION_TAG }}
       MANIFEST_LATEST_TAG: ${{ needs.load_config.outputs.MANIFEST_LATEST_TAG }}
-      BASE_IMAGE_DISTRO: ${{ needs.load_config.outputs.BASE_IMAGE_DISTRO }}
-      BASE_IMAGE_DESCRIPTION: ${{ needs.load_config.outputs.BASE_IMAGE_DESCRIPTION }}
     outputs:
       AICAGE_IMAGE_DIGEST_amd64: ${{ steps.out.outputs.AICAGE_IMAGE_DIGEST_amd64 }}
       AICAGE_IMAGE_DIGEST_arm64: ${{ steps.out.outputs.AICAGE_IMAGE_DIGEST_arm64 }}
@@ -182,9 +176,6 @@ jobs:
             ${{ steps.config.outputs.IMAGE_TEST_TAG }}
           labels: |
             org.opencontainers.image.description=Base image for aicage (${{ env.BASE_ALIAS }})
-            org.aicage.base=${{ env.BASE_ALIAS }}
-            org.aicage.base.distro=${{ env.BASE_IMAGE_DISTRO }}
-            org.aicage.base.description=${{ env.BASE_IMAGE_DESCRIPTION }}
 
       - name: "Test: Pull base image for local tests"
         run: |

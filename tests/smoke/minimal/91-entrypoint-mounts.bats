@@ -30,7 +30,7 @@ cleanup_mount_dir() {
     --env AICAGE_GID=2345 \
     --env AICAGE_USER=demo \
     "${AICAGE_IMAGE_BASE_IMAGE}" \
-    /bin/bash -c '
+    -c '
       set -euo pipefail
       [[ -L ${HOME}/.gitconfig ]]
       [[ -L ${HOME}/.config/git/config ]]
@@ -58,7 +58,7 @@ cleanup_mount_dir() {
     --env AICAGE_GID=6789 \
     --env AICAGE_USER=agent \
     "${AICAGE_IMAGE_BASE_IMAGE}" \
-    /bin/bash -c '
+    -c '
       set -euo pipefail
       [[ -L ${HOME}/.gnupg ]]
       [[ -L ${HOME}/.ssh ]]
@@ -89,7 +89,7 @@ cleanup_mount_dir() {
       set -euo pipefail
       mkdir -p /etc/skel
       printf "skel\n" >/etc/skel/.skel_test
-      /usr/local/bin/entrypoint.sh /bin/bash -c "set -euo pipefail; test ! -e \"\$HOME/.skel_test\""
+      /usr/local/bin/entrypoint.sh -c "set -euo pipefail; test ! -e \"\$HOME/.skel_test\""
     '
   [ "$status" -eq 0 ]
 }
@@ -109,7 +109,7 @@ cleanup_mount_dir() {
       set -euo pipefail
       mkdir -p /etc/skel
       printf "skel\n" >/etc/skel/.skel_test
-      /usr/local/bin/entrypoint.sh /bin/bash -c "set -euo pipefail; test -e \"\$HOME/.skel_test\""
+      /usr/local/bin/entrypoint.sh -c "set -euo pipefail; test -e \"\$HOME/.skel_test\""
     '
   [ "$status" -eq 0 ]
 }

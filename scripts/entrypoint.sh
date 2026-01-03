@@ -170,5 +170,7 @@ export PATH="${HOME}/.local/bin:${PATH}"
 
 cd "${AICAGE_WORKSPACE}"
 
+: "${AICAGE_ENTRYPOINT_CMD:=bash}"
+
 # switch to user
-exec gosu "${TARGET_UID}" "$@"
+exec gosu "${TARGET_UID}" "${AICAGE_ENTRYPOINT_CMD}" "$@"

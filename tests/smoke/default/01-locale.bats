@@ -3,7 +3,7 @@
 @test "locale available" {
   run docker run --rm \
     "${AICAGE_IMAGE_BASE_IMAGE}" \
-    /bin/bash -c '
+    -c '
       set -euo pipefail
       . /etc/os-release
 

@@ -8,7 +8,7 @@
     --env AICAGE_GID="${docker_sock_gid}" \
     --env AICAGE_USER=demo \
     "${AICAGE_IMAGE_BASE_IMAGE}" \
-    /bin/bash -c '
+    -c '
       set -euo pipefail
       sock_gid="$(stat -c "%g" /var/run/docker.sock)"
       group_name="$(getent group "${sock_gid}" | cut -d: -f1)"

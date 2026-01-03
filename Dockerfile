@@ -27,6 +27,7 @@ RUN --mount=type=bind,source=scripts,target=/tmp/aicage/scripts,readonly \
 
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 
+ENV AICAGE_ENTRYPOINT_CMD=bash
+
 # Use tini from PATH to work across distros (e.g. Alpine installs it in /sbin).
 ENTRYPOINT ["tini", "--", "/usr/local/bin/entrypoint.sh"]
-CMD ["bash"]

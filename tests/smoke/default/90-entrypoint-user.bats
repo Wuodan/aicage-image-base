@@ -6,7 +6,7 @@
     --env AICAGE_GID=2345 \
     --env AICAGE_USER=demo \
     "${AICAGE_IMAGE_BASE_IMAGE}" \
-    /bin/bash -c '
+    -c '
       set -euo pipefail
       printf "%s\n%s\n%s\n" "$(id -u)" "$(id -g)" "${HOME}"
     '
@@ -45,7 +45,7 @@
       if [[ -z "${existing_user}" ]]; then
         useradd -m -u 1000 -g 1000 -s /bin/bash ubuntu
       fi
-      /usr/local/bin/entrypoint.sh /bin/bash -c "set -euo pipefail; echo \"\$(id -un):\$(id -gn):\$(id -u):\$(id -g)\""
+      /usr/local/bin/entrypoint.sh -c "set -euo pipefail; echo \"\$(id -un):\$(id -gn):\$(id -u):\$(id -g)\""
     '
   [ "$status" -eq 0 ]
   result="$(printf '%s\n' "${output}" | tail -n 1)"

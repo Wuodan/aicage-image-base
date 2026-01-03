@@ -1,0 +1,131 @@
+name: Minimal signed + provenanced multi-arch image (buildx-native)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/sigprov-test
+  TAG: test
+
+jobs:
+  build:
+    name: Build + sign (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            platform: linux/amd64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+
+    outputs:
+      digest_amd64: ${{ steps.out.outputs.digest_amd64 }}
+      digest_arm64: ${{ steps.out.outputs.digest_arm64 }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: sigstore/cosign-installer@v3
+
+      - name: Build + push (with provenance)
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: TEST_image_sign_provenance/Dockerfile
+          platforms: ${{ matrix.platform }}
+          push: true
+          tags: ${{ env.IMAGE }}:${{ env.TAG }}-${{ matrix.arch }}
+          provenance: mode=max
+          sbom: true
+
+      - name: Sign per-arch digest
+        run: |
+          set -euo pipefail
+          cosign sign --yes "${IMAGE}@${{ steps.build.outputs.digest }}"
+
+      - name: Verify signature (must pass)
+        run: |
+          set -euo pipefail
+          cosign verify \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity-regexp '^https://github.com/.+/.github/workflows/.+@refs/.+' \
+            "${IMAGE}@${{ steps.build.outputs.digest }}"
+
+      - name: Verify provenance exists (must pass)
+        run: |
+          set -euo pipefail
+          ADIGEST="$(docker buildx imagetools inspect --raw "${IMAGE}@${{ steps.build.outputs.digest }}" \
+            | jq -r '.manifests[]
+              | select(.annotations."vnd.docker.reference.type"=="attestation-manifest")
+              | .digest' | head -n1)"
+          test -n "$ADIGEST"
+          docker buildx imagetools inspect --raw "${IMAGE}@${ADIGEST}" \
+            | jq -e '.layers[]?
+              | .annotations."in-toto.io/predicate-type"
+              | select(startswith("https://slsa.dev/provenance/"))'
+
+      - name: Export digest
+        id: out
+        run: |
+          if [ "${{ matrix.arch }}" = amd64 ]; then
+            echo "digest_amd64=${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "digest_arm64=${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
+          fi
+
+  manifest:
+    name: Create + sign manifest
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: sigstore/cosign-installer@v3
+
+      - name: Create manifest
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create \
+            -t "${IMAGE}:${TAG}" \
+            "${IMAGE}@${{ needs.build.outputs.digest_amd64 }}" \
+            "${IMAGE}@${{ needs.build.outputs.digest_arm64 }}"
+
+      - name: Resolve manifest digest
+        id: md
+        run: |
+          set -euo pipefail
+          DIGEST="$(docker buildx imagetools inspect "${IMAGE}:${TAG}" | sed -n 's/^Digest:[[:space:]]*//p' | head -n1)"
+          test -n "$DIGEST"
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+
+      - name: Sign manifest digest
+        run: |
+          set -euo pipefail
+          cosign sign --yes "${IMAGE}@${{ steps.md.outputs.digest }}"
+
+      - name: Verify manifest signature (must pass)
+        run: |
+          set -euo pipefail
+          cosign verify \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity-regexp '^https://github.com/.+/.github/workflows/.+@refs/.+' \
+            "${IMAGE}@${{ steps.md.outputs.digest }}"

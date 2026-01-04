@@ -270,6 +270,10 @@ jobs:
               | .digest' | head -n1)"
           printf 'layer_digest=%s\n' "${layer_digest}"
           test -n "${layer_digest}"
+          bytes="$(oras blob fetch --output - "${IMAGE_NAME}@${layer_digest}" \
+            | { gzip -dc 2>/dev/null || cat; } \
+            | wc -c | tr -d ' ')"
+          printf 'att_bytes=%s\n' "${bytes}"
           oras blob fetch --output - "${IMAGE_NAME}@${layer_digest}" \
             | { gzip -dc 2>/dev/null || cat; } \
             | jq -e --arg d "${digest#sha256:}" '
@@ -456,6 +460,10 @@ jobs:
                 | .digest' | head -n1)"
             printf 'layer_digest=%s\n' "${layer_digest}"
             test -n "${layer_digest}"
+            bytes="$(oras blob fetch --output - "${IMAGE_NAME}@${layer_digest}" \
+              | { gzip -dc 2>/dev/null || cat; } \
+              | wc -c | tr -d ' ')"
+            printf 'att_bytes=%s\n' "${bytes}"
             oras blob fetch --output - "${IMAGE_NAME}@${layer_digest}" \
               | { gzip -dc 2>/dev/null || cat; } \
               | jq -e --arg d "${digest#sha256:}" '

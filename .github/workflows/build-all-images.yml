@@ -274,7 +274,7 @@ jobs:
             | jq -e --arg d "${digest#sha256:}" '
               if has("payload") then .payload | @base64d | fromjson else . end
               | (.predicateType | startswith("https://slsa.dev/provenance/"))
-              and (.subject[]? | select(.digest.sha256 == $d))
+              and ((.subject // []) | map(.digest.sha256) | index($d))
             ' >/dev/null
 
       - name: "Test: Pull base image for local tests"
@@ -460,7 +460,7 @@ jobs:
               | jq -e --arg d "${digest#sha256:}" '
                 if has("payload") then .payload | @base64d | fromjson else . end
                 | (.predicateType | startswith("https://slsa.dev/provenance/"))
-                and (.subject[]? | select(.digest.sha256 == $d))
+                and ((.subject // []) | map(.digest.sha256) | index($d))
               ' >/dev/null
           done
 

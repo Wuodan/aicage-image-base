@@ -259,6 +259,7 @@ jobs:
           digest="${{ steps.build_image.outputs.digest }}"
           discover="$(oras discover --format json "${IMAGE_NAME}@${digest}" || true)"
           printf 'discover_len=%s\n' "$(printf '%s' "${discover}" | wc -c | tr -d ' ')"
+          printf 'discover=%s\n' "${discover}"
           att_digest="$(printf '%s' "${discover}" \
             | jq -r '.referrers[]
               | select(.annotations."vnd.docker.reference.type"=="attestation-manifest")
@@ -450,6 +451,7 @@ jobs:
             digest="${!digest_var}"
             discover="$(oras discover --format json "${IMAGE_NAME}@${digest}" || true)"
             printf 'discover_len=%s\n' "$(printf '%s' "${discover}" | wc -c | tr -d ' ')"
+            printf 'discover=%s\n' "${discover}"
             att_digest="$(printf '%s' "${discover}" \
               | jq -r '.referrers[]
                 | select(.annotations."vnd.docker.reference.type"=="attestation-manifest")

@@ -271,7 +271,9 @@ jobs:
           test -n "${layer_digest}"
           payload="$(oras blob fetch --output - "${IMAGE_NAME}@${layer_digest}" \
             | { gzip -dc 2>/dev/null || cat; })"
-          printf '%s\n' "${payload}"
+          printf 'payload_b64_start\n'
+          printf '%s' "${payload}" | base64 -w0 | fold -w 200
+          printf '\npayload_b64_end\n'
           printf '%s' "${payload}" | jq -e --arg d "${digest#sha256:}" '
             (if type=="object" and has("payload")
              then .payload | @base64d | fromjson
@@ -461,7 +463,9 @@ jobs:
             test -n "${layer_digest}"
             payload="$(oras blob fetch --output - "${IMAGE_NAME}@${layer_digest}" \
               | { gzip -dc 2>/dev/null || cat; })"
-            printf '%s\n' "${payload}"
+            printf 'payload_b64_start\n'
+            printf '%s' "${payload}" | base64 -w0 | fold -w 200
+            printf '\npayload_b64_end\n'
             printf '%s' "${payload}" | jq -e --arg d "${digest#sha256:}" '
               (if type=="object" and has("payload")
                then .payload | @base64d | fromjson

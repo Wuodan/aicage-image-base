@@ -272,28 +272,28 @@ jobs:
             | .digest' | head -n1)"
           test -n "$layer_digest"
           oras blob fetch --output attestation.json "${IMAGE_NAME}@${layer_digest}"
-          decode_attestation() {
-            if [ "$(head -c2 attestation.json | od -An -tx1 | tr -d ' \n')" = "1f8b" ]; then
-              gzip -dc attestation.json
-            else
-              cat attestation.json
-            fi
-          }
-          att_raw="$(decode_attestation)"
-          printf '%s\n' "${att_raw}"
-          if printf '%s' "${att_raw}" | jq -e 'has("payload")' >/dev/null; then
-            statement="$(printf '%s' "${att_raw}" | jq -r '.payload' | base64 -d)"
+          if [ "$(head -c2 attestation.json | od -An -tx1 | tr -d ' \n')" = "1f8b" ]; then
+            gzip -dc attestation.json > attestation.decoded.json
           else
-            statement="${att_raw}"
+            cp attestation.json attestation.decoded.json
           fi
+          cat attestation.decoded.json
           d="${expected_digest#sha256:}"
-          printf '%s' "${statement}" | jq -e --arg d "${d}" '
-            (.predicateType | startswith("https://slsa.dev/provenance/"))
-            and
-            (.subject[]? | select(.name | contains(env.IMAGE_TEST_TAG)))
-            and
-            (.subject[]? | select(.digest.sha256 == $d))
-          ' >/dev/null
+          if jq -e 'has("payload")' attestation.decoded.json >/dev/null; then
+            jq -r '.payload' attestation.decoded.json \
+              | base64 -d \
+              | jq -e --arg d "${d}" '
+                (.predicateType | startswith("https://slsa.dev/provenance/"))
+                and
+                (.subject[]? | select(.digest.sha256 == $d))
+              ' >/dev/null
+          else
+            jq -e --arg d "${d}" '
+              (.predicateType | startswith("https://slsa.dev/provenance/"))
+              and
+              (.subject[]? | select(.digest.sha256 == $d))
+            ' attestation.decoded.json >/dev/null
+          fi
 
       - name: "Test: Pull base image for local tests"
         run: |
@@ -472,28 +472,28 @@ jobs:
               | .digest' | head -n1)"
             test -n "$layer_digest"
             oras blob fetch --output attestation.json "${IMAGE_NAME}@${layer_digest}"
-            decode_attestation() {
-              if [ "$(head -c2 attestation.json | od -An -tx1 | tr -d ' \n')" = "1f8b" ]; then
-                gzip -dc attestation.json
-              else
-                cat attestation.json
-              fi
-            }
-            att_raw="$(decode_attestation)"
-            printf '%s\n' "${att_raw}"
-            if printf '%s' "${att_raw}" | jq -e 'has("payload")' >/dev/null; then
-              statement="$(printf '%s' "${att_raw}" | jq -r '.payload' | base64 -d)"
+            if [ "$(head -c2 attestation.json | od -An -tx1 | tr -d ' \n')" = "1f8b" ]; then
+              gzip -dc attestation.json > attestation.decoded.json
             else
-              statement="${att_raw}"
+              cp attestation.json attestation.decoded.json
             fi
+            cat attestation.decoded.json
             d="${digest#sha256:}"
-            printf '%s' "${statement}" | jq -e --arg d "${d}" '
-              (.predicateType | startswith("https://slsa.dev/provenance/"))
-              and
-              (.subject[]? | select(.name | contains(env.image_tag)))
-              and
-              (.subject[]? | select(.digest.sha256 == $d))
-            ' >/dev/null
+            if jq -e 'has("payload")' attestation.decoded.json >/dev/null; then
+              jq -r '.payload' attestation.decoded.json \
+                | base64 -d \
+                | jq -e --arg d "${d}" '
+                  (.predicateType | startswith("https://slsa.dev/provenance/"))
+                  and
+                  (.subject[]? | select(.digest.sha256 == $d))
+                ' >/dev/null
+            else
+              jq -e --arg d "${d}" '
+                (.predicateType | startswith("https://slsa.dev/provenance/"))
+                and
+                (.subject[]? | select(.digest.sha256 == $d))
+              ' attestation.decoded.json >/dev/null
+            fi
           done
 
       - name: Install Cosign

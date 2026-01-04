@@ -256,28 +256,23 @@ jobs:
       - name: Verify image provenance (predicate + subject)
         run: |
           set -euo pipefail
-          resolve_image_digest() {
-            local ref="$1"
-            local raw digest
-            raw="$(docker buildx imagetools inspect --raw "${ref}")"
-            digest="$(printf '%s' "${raw}" | jq -r 'if .manifests then
-              (.manifests[]
-                | select(.annotations."vnd.docker.reference.type"!="attestation-manifest")
-                | .digest)
-              else empty end' | head -n1)"
-            if [ -z "${digest}" ]; then
-              digest="$(docker buildx imagetools inspect "${ref}" \
-                | sed -n 's/^Digest:[[:space:]]*//p' | head -n1)"
-            fi
-            printf '%s\n' "${digest}"
-          }
           digest="${{ steps.build_image.outputs.digest }}"
-          expected_digest="$(resolve_image_digest "${IMAGE_TEST_TAG}")"
+          raw="$(docker buildx imagetools inspect --raw "${IMAGE_TEST_TAG}")"
+          expected_digest="$(printf '%s' "${raw}" | jq -r '
+            .manifests[]?
+            | select(.annotations."vnd.docker.reference.type"!="attestation-manifest")
+            | .digest
+          ' | head -n1)"
+          if [ -z "${expected_digest}" ]; then
+            expected_digest="$(docker buildx imagetools inspect "${IMAGE_TEST_TAG}" \
+              | sed -n 's/^Digest:[[:space:]]*//p' | head -n1)"
+          fi
           test -n "${expected_digest}"
-          ADIGEST="$(docker buildx imagetools inspect --raw "${IMAGE_NAME}@${digest}" \
-            | jq -r '.manifests[]
-              | select(.annotations."vnd.docker.reference.type"=="attestation-manifest")
-              | .digest' | head -n1)"
+          ADIGEST="$(printf '%s' "${raw}" | jq -r '
+            .manifests[]?
+            | select(.annotations."vnd.docker.reference.type"=="attestation-manifest")
+            | .digest
+          ' | head -n1)"
           test -n "$ADIGEST"
           att_manifest="$(oras manifest fetch --output - "${IMAGE_NAME}@${ADIGEST}")"
           layer_digest="$(printf '%s' "$att_manifest" | jq -r '.layers[]
@@ -468,30 +463,25 @@ jobs:
       - name: Verify manifest images have provenance (predicate + subject)
         run: |
           set -euo pipefail
-          resolve_image_digest() {
-            local ref="$1"
-            local raw digest
-            raw="$(docker buildx imagetools inspect --raw "${ref}")"
-            digest="$(printf '%s' "${raw}" | jq -r 'if .manifests then
-              (.manifests[]
-                | select(.annotations."vnd.docker.reference.type"!="attestation-manifest")
-                | .digest)
-              else empty end' | head -n1)"
-            if [ -z "${digest}" ]; then
-              digest="$(docker buildx imagetools inspect "${ref}" \
-                | sed -n 's/^Digest:[[:space:]]*//p' | head -n1)"
-            fi
-            printf '%s\n' "${digest}"
-          }
           for arch in amd64 arm64; do
             image_tag_var="IMAGE_TEST_TAG_${arch}"
             image_tag="${!image_tag_var}"
-            digest="$(resolve_image_digest "${image_tag}")"
+            raw="$(docker buildx imagetools inspect --raw "${image_tag}")"
+            digest="$(printf '%s' "${raw}" | jq -r '
+              .manifests[]?
+              | select(.annotations."vnd.docker.reference.type"!="attestation-manifest")
+              | .digest
+            ' | head -n1)"
+            if [ -z "${digest}" ]; then
+              digest="$(docker buildx imagetools inspect "${image_tag}" \
+                | sed -n 's/^Digest:[[:space:]]*//p' | head -n1)"
+            fi
             test -n "${digest}"
-            ADIGEST="$(docker buildx imagetools inspect --raw "${IMAGE_NAME}@${digest}" \
-              | jq -r '.manifests[]
-                | select(.annotations."vnd.docker.reference.type"=="attestation-manifest")
-                | .digest' | head -n1)"
+            ADIGEST="$(printf '%s' "${raw}" | jq -r '
+              .manifests[]?
+              | select(.annotations."vnd.docker.reference.type"=="attestation-manifest")
+              | .digest
+            ' | head -n1)"
             test -n "$ADIGEST"
             att_manifest="$(oras manifest fetch --output - "${IMAGE_NAME}@${ADIGEST}")"
             layer_digest="$(printf '%s' "$att_manifest" | jq -r '.layers[]

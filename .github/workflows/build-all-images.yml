@@ -253,12 +253,21 @@ jobs:
       - name: Verify image provenance (predicate + subject)
         run: |
           set -euo pipefail
+          digest="$(docker buildx imagetools inspect --raw "${IMAGE_TEST_TAG}" \
+            | jq -r '.manifests[]?
+              | select(.annotations."vnd.docker.reference.type"!="attestation-manifest")
+              | .digest' | head -n1)"
+          if [ -z "${digest}" ]; then
+            digest="$(docker buildx imagetools inspect "${IMAGE_TEST_TAG}" \
+              | sed -n 's/^Digest:[[:space:]]*//p' | head -n1)"
+          fi
+          test -n "${digest}"
           cosign verify-attestation \
             --type slsaprovenance \
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
             --certificate-identity-regexp \
               "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/.*@refs/.*/.*$" \
-            "${IMAGE_NAME}@${{ steps.build_image.outputs.digest }}"
+            "${IMAGE_NAME}@${digest}"
 
       - name: "Test: Pull base image for local tests"
         run: |
@@ -420,13 +429,23 @@ jobs:
         run: |
           set -euo pipefail
           for arch in amd64 arm64; do
-            digest_var="AICAGE_IMAGE_DIGEST_${arch}"
+            image_tag_var="IMAGE_TEST_TAG_${arch}"
+            image_tag="${!image_tag_var}"
+            digest="$(docker buildx imagetools inspect --raw "${image_tag}" \
+              | jq -r '.manifests[]?
+                | select(.annotations."vnd.docker.reference.type"!="attestation-manifest")
+                | .digest' | head -n1)"
+            if [ -z "${digest}" ]; then
+              digest="$(docker buildx imagetools inspect "${image_tag}" \
+                | sed -n 's/^Digest:[[:space:]]*//p' | head -n1)"
+            fi
+            test -n "${digest}"
             cosign verify-attestation \
               --type slsaprovenance \
               --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
               --certificate-identity-regexp \
                 "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/.*@refs/.*/.*$" \
-              "${IMAGE_NAME}@${!digest_var}"
+              "${IMAGE_NAME}@${digest}"
           done
 
       - name: "Publish: Sign multi-arch manifest"

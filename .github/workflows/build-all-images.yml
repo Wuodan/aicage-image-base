@@ -256,7 +256,37 @@ jobs:
       - name: Verify image provenance (predicate + subject)
         run: |
           set -euo pipefail
-          scripts/verify-provenance.sh "${IMAGE_TEST_TAG}"
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "${tmp_dir}"' EXIT
+          raw="$(docker buildx imagetools inspect --raw "${IMAGE_TEST_TAG}")"
+          digest="$(printf '%s' "${raw}" | jq -r '.manifests[]?
+            | select(.annotations."vnd.docker.reference.type"!="attestation-manifest")
+            | .digest' | head -n1)"
+          [ -n "${digest}" ] || digest="$(docker buildx imagetools inspect "${IMAGE_TEST_TAG}" \
+            | sed -n 's/^Digest:[[:space:]]*//p' | head -n1)"
+          att_digest="$(printf '%s' "${raw}" | jq -r '.manifests[]?
+            | select(.annotations."vnd.docker.reference.type"=="attestation-manifest")
+            | .digest' | head -n1)"
+          [ -n "${att_digest}" ] || att_digest="$(docker buildx imagetools inspect --raw "${IMAGE_NAME}@${digest}" \
+            | jq -r '.manifests[]?
+              | select(.annotations."vnd.docker.reference.type"=="attestation-manifest")
+              | .digest' | head -n1)"
+          layer_digest="$(oras manifest fetch --output - "${IMAGE_NAME}@${att_digest}" \
+            | jq -r '.layers[]
+              | select(.annotations."in-toto.io/predicate-type"
+                | startswith("https://slsa.dev/provenance/"))
+              | .digest' | head -n1)"
+          oras blob fetch --output "${tmp_dir}/att.json" "${IMAGE_NAME}@${layer_digest}"
+          if [ "$(head -c2 "${tmp_dir}/att.json" | od -An -tx1 | tr -d ' \n')" = "1f8b" ]; then
+            gzip -dc "${tmp_dir}/att.json" > "${tmp_dir}/att.dec.json"
+          else
+            cp "${tmp_dir}/att.json" "${tmp_dir}/att.dec.json"
+          fi
+          jq -e --arg d "${digest#sha256:}" '
+            if has("payload") then .payload | @base64d | fromjson else . end
+            | (.predicateType | startswith("https://slsa.dev/provenance/"))
+            and (.subject[]? | select(.digest.sha256 == $d))
+          ' "${tmp_dir}/att.dec.json" >/dev/null
 
       - name: "Test: Pull base image for local tests"
         run: |
@@ -421,9 +451,39 @@ jobs:
         run: |
           set -euo pipefail
           for arch in amd64 arm64; do
+            tmp_dir="$(mktemp -d)"
+            trap 'rm -rf "${tmp_dir}"' EXIT
             image_tag_var="IMAGE_TEST_TAG_${arch}"
             image_tag="${!image_tag_var}"
-            scripts/verify-provenance.sh "${image_tag}"
+            raw="$(docker buildx imagetools inspect --raw "${image_tag}")"
+            digest="$(printf '%s' "${raw}" | jq -r '.manifests[]?
+              | select(.annotations."vnd.docker.reference.type"!="attestation-manifest")
+              | .digest' | head -n1)"
+            [ -n "${digest}" ] || digest="$(docker buildx imagetools inspect "${image_tag}" \
+              | sed -n 's/^Digest:[[:space:]]*//p' | head -n1)"
+            att_digest="$(printf '%s' "${raw}" | jq -r '.manifests[]?
+              | select(.annotations."vnd.docker.reference.type"=="attestation-manifest")
+              | .digest' | head -n1)"
+            [ -n "${att_digest}" ] || att_digest="$(docker buildx imagetools inspect --raw "${IMAGE_NAME}@${digest}" \
+              | jq -r '.manifests[]?
+                | select(.annotations."vnd.docker.reference.type"=="attestation-manifest")
+                | .digest' | head -n1)"
+            layer_digest="$(oras manifest fetch --output - "${IMAGE_NAME}@${att_digest}" \
+              | jq -r '.layers[]
+                | select(.annotations."in-toto.io/predicate-type"
+                  | startswith("https://slsa.dev/provenance/"))
+                | .digest' | head -n1)"
+            oras blob fetch --output "${tmp_dir}/att.json" "${IMAGE_NAME}@${layer_digest}"
+            if [ "$(head -c2 "${tmp_dir}/att.json" | od -An -tx1 | tr -d ' \n')" = "1f8b" ]; then
+              gzip -dc "${tmp_dir}/att.json" > "${tmp_dir}/att.dec.json"
+            else
+              cp "${tmp_dir}/att.json" "${tmp_dir}/att.dec.json"
+            fi
+            jq -e --arg d "${digest#sha256:}" '
+              if has("payload") then .payload | @base64d | fromjson else . end
+              | (.predicateType | startswith("https://slsa.dev/provenance/"))
+              and (.subject[]? | select(.digest.sha256 == $d))
+            ' "${tmp_dir}/att.dec.json" >/dev/null
           done
 
       - name: "Publish: Sign multi-arch manifest"

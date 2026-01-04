@@ -257,8 +257,10 @@ jobs:
         run: |
           set -euo pipefail
           digest="${{ steps.build_image.outputs.digest }}"
-          expected_digest="$(docker buildx imagetools inspect "${IMAGE_TEST_TAG}" \
-            | sed -n 's/^Digest:[[:space:]]*//p' | head -n1)"
+          expected_digest="$(docker buildx imagetools inspect --raw "${IMAGE_TEST_TAG}" \
+            | jq -r '.manifests[]
+              | select(.annotations."vnd.docker.reference.type"!="attestation-manifest")
+              | .digest' | head -n1)"
           test -n "${expected_digest}"
           ADIGEST="$(docker buildx imagetools inspect --raw "${IMAGE_NAME}@${digest}" \
             | jq -r '.manifests[]
@@ -457,8 +459,10 @@ jobs:
           for arch in amd64 arm64; do
             image_tag_var="IMAGE_TEST_TAG_${arch}"
             image_tag="${!image_tag_var}"
-            digest="$(docker buildx imagetools inspect "${image_tag}" \
-              | sed -n 's/^Digest:[[:space:]]*//p' | head -n1)"
+            digest="$(docker buildx imagetools inspect --raw "${image_tag}" \
+              | jq -r '.manifests[]
+                | select(.annotations."vnd.docker.reference.type"!="attestation-manifest")
+                | .digest' | head -n1)"
             test -n "${digest}"
             ADIGEST="$(docker buildx imagetools inspect --raw "${IMAGE_NAME}@${digest}" \
               | jq -r '.manifests[]

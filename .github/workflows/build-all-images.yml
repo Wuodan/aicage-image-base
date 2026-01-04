@@ -250,59 +250,15 @@ jobs:
       - name: Install Cosign
         uses: sigstore/cosign-installer@v4.0.0
 
-      - name: Install ORAS
-        uses: oras-project/setup-oras@v1
-
       - name: Verify image provenance (predicate + subject)
         run: |
           set -euo pipefail
-          digest="${{ steps.build_image.outputs.digest }}"
-          raw="$(docker buildx imagetools inspect --raw "${IMAGE_TEST_TAG}")"
-          expected_digest="$(printf '%s' "${raw}" | jq -r '
-            .manifests[]?
-            | select(.annotations."vnd.docker.reference.type"!="attestation-manifest")
-            | .digest
-          ' | head -n1)"
-          if [ -z "${expected_digest}" ]; then
-            expected_digest="$(docker buildx imagetools inspect "${IMAGE_TEST_TAG}" \
-              | sed -n 's/^Digest:[[:space:]]*//p' | head -n1)"
-          fi
-          test -n "${expected_digest}"
-          ADIGEST="$(printf '%s' "${raw}" | jq -r '
-            .manifests[]?
-            | select(.annotations."vnd.docker.reference.type"=="attestation-manifest")
-            | .digest
-          ' | head -n1)"
-          test -n "$ADIGEST"
-          att_manifest="$(oras manifest fetch --output - "${IMAGE_NAME}@${ADIGEST}")"
-          layer_digest="$(printf '%s' "$att_manifest" | jq -r '.layers[]
-            | select(.annotations."in-toto.io/predicate-type"
-              | startswith("https://slsa.dev/provenance/"))
-            | .digest' | head -n1)"
-          test -n "$layer_digest"
-          oras blob fetch --output attestation.json "${IMAGE_NAME}@${layer_digest}"
-          if [ "$(head -c2 attestation.json | od -An -tx1 | tr -d ' \n')" = "1f8b" ]; then
-            gzip -dc attestation.json > attestation.decoded.json
-          else
-            cp attestation.json attestation.decoded.json
-          fi
-          cat attestation.decoded.json
-          d="${expected_digest#sha256:}"
-          if jq -e 'has("payload")' attestation.decoded.json >/dev/null; then
-            jq -r '.payload' attestation.decoded.json \
-              | base64 -d \
-              | jq -e --arg d "${d}" '
-                (.predicateType | startswith("https://slsa.dev/provenance/"))
-                and
-                (.subject[]? | select(.digest.sha256 == $d))
-              ' >/dev/null
-          else
-            jq -e --arg d "${d}" '
-              (.predicateType | startswith("https://slsa.dev/provenance/"))
-              and
-              (.subject[]? | select(.digest.sha256 == $d))
-            ' attestation.decoded.json >/dev/null
-          fi
+          cosign verify-attestation \
+            --type slsaprovenance \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            --certificate-identity-regexp \
+              "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/.*@refs/.*/.*$" \
+            "${IMAGE_NAME}@${{ steps.build_image.outputs.digest }}"
 
       - name: "Test: Pull base image for local tests"
         run: |
@@ -457,65 +413,21 @@ jobs:
           test -n "$DIGEST"
           echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
 
-      - name: Install ORAS
-        uses: oras-project/setup-oras@v1
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v4.0.0
 
       - name: Verify manifest images have provenance (predicate + subject)
         run: |
           set -euo pipefail
           for arch in amd64 arm64; do
-            image_tag_var="IMAGE_TEST_TAG_${arch}"
-            image_tag="${!image_tag_var}"
-            raw="$(docker buildx imagetools inspect --raw "${image_tag}")"
-            digest="$(printf '%s' "${raw}" | jq -r '
-              .manifests[]?
-              | select(.annotations."vnd.docker.reference.type"!="attestation-manifest")
-              | .digest
-            ' | head -n1)"
-            if [ -z "${digest}" ]; then
-              digest="$(docker buildx imagetools inspect "${image_tag}" \
-                | sed -n 's/^Digest:[[:space:]]*//p' | head -n1)"
-            fi
-            test -n "${digest}"
-            ADIGEST="$(printf '%s' "${raw}" | jq -r '
-              .manifests[]?
-              | select(.annotations."vnd.docker.reference.type"=="attestation-manifest")
-              | .digest
-            ' | head -n1)"
-            test -n "$ADIGEST"
-            att_manifest="$(oras manifest fetch --output - "${IMAGE_NAME}@${ADIGEST}")"
-            layer_digest="$(printf '%s' "$att_manifest" | jq -r '.layers[]
-              | select(.annotations."in-toto.io/predicate-type"
-                | startswith("https://slsa.dev/provenance/"))
-              | .digest' | head -n1)"
-            test -n "$layer_digest"
-            oras blob fetch --output attestation.json "${IMAGE_NAME}@${layer_digest}"
-            if [ "$(head -c2 attestation.json | od -An -tx1 | tr -d ' \n')" = "1f8b" ]; then
-              gzip -dc attestation.json > attestation.decoded.json
-            else
-              cp attestation.json attestation.decoded.json
-            fi
-            cat attestation.decoded.json
-            d="${digest#sha256:}"
-            if jq -e 'has("payload")' attestation.decoded.json >/dev/null; then
-              jq -r '.payload' attestation.decoded.json \
-                | base64 -d \
-                | jq -e --arg d "${d}" '
-                  (.predicateType | startswith("https://slsa.dev/provenance/"))
-                  and
-                  (.subject[]? | select(.digest.sha256 == $d))
-                ' >/dev/null
-            else
-              jq -e --arg d "${d}" '
-                (.predicateType | startswith("https://slsa.dev/provenance/"))
-                and
-                (.subject[]? | select(.digest.sha256 == $d))
-              ' attestation.decoded.json >/dev/null
-            fi
+            digest_var="AICAGE_IMAGE_DIGEST_${arch}"
+            cosign verify-attestation \
+              --type slsaprovenance \
+              --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+              --certificate-identity-regexp \
+                "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/.*@refs/.*/.*$" \
+              "${IMAGE_NAME}@${!digest_var}"
           done
-
-      - name: Install Cosign
-        uses: sigstore/cosign-installer@v4.0.0
 
       - name: "Publish: Sign multi-arch manifest"
         run: |

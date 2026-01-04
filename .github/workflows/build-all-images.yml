@@ -290,6 +290,8 @@ jobs:
           printf '%s' "${statement}" | jq -e --arg d "${d}" '
             (.predicateType | startswith("https://slsa.dev/provenance/"))
             and
+            (.subject[]? | select(.name | contains(env.IMAGE_TEST_TAG)))
+            and
             (.subject[]? | select(.digest.sha256 == $d))
           ' >/dev/null
 
@@ -375,17 +377,23 @@ jobs:
           MANIFEST_VERSION_TAG="${IMAGE_NAME}:${BASE_ALIAS}-${AICAGE_VERSION}"
           MANIFEST_LATEST_TAG="${IMAGE_NAME}:${BASE_ALIAS}"
           MANIFEST_TEST_TAG="${MANIFEST_VERSION_TAG}-test"
+          IMAGE_TEST_TAG_amd64="${MANIFEST_VERSION_TAG}-amd64-test"
+          IMAGE_TEST_TAG_arm64="${MANIFEST_VERSION_TAG}-arm64-test"
           {
             echo "IMAGE_NAME=${IMAGE_NAME}"
             echo "MANIFEST_VERSION_TAG=${MANIFEST_VERSION_TAG}"
             echo "MANIFEST_LATEST_TAG=${MANIFEST_LATEST_TAG}"
             echo "MANIFEST_TEST_TAG=${MANIFEST_TEST_TAG}"
+            echo "IMAGE_TEST_TAG_amd64=${IMAGE_TEST_TAG_amd64}"
+            echo "IMAGE_TEST_TAG_arm64=${IMAGE_TEST_TAG_arm64}"
           } >> "$GITHUB_OUTPUT"
           {
             echo "IMAGE_NAME=${IMAGE_NAME}"
             echo "MANIFEST_VERSION_TAG=${MANIFEST_VERSION_TAG}"
             echo "MANIFEST_LATEST_TAG=${MANIFEST_LATEST_TAG}"
             echo "MANIFEST_TEST_TAG=${MANIFEST_TEST_TAG}"
+            echo "IMAGE_TEST_TAG_amd64=${IMAGE_TEST_TAG_amd64}"
+            echo "IMAGE_TEST_TAG_arm64=${IMAGE_TEST_TAG_arm64}"
           } >> "$GITHUB_ENV"
 
       - name: Download amd64 digest
@@ -446,7 +454,12 @@ jobs:
       - name: Verify manifest images have provenance (predicate + subject)
         run: |
           set -euo pipefail
-          for digest in "${AICAGE_IMAGE_DIGEST_amd64}" "${AICAGE_IMAGE_DIGEST_arm64}"; do
+          for arch in amd64 arm64; do
+            image_tag_var="IMAGE_TEST_TAG_${arch}"
+            image_tag="${!image_tag_var}"
+            digest="$(docker buildx imagetools inspect "${image_tag}" \
+              | sed -n 's/^Digest:[[:space:]]*//p' | head -n1)"
+            test -n "${digest}"
             ADIGEST="$(docker buildx imagetools inspect --raw "${IMAGE_NAME}@${digest}" \
               | jq -r '.manifests[]
                 | select(.annotations."vnd.docker.reference.type"=="attestation-manifest")
@@ -476,6 +489,8 @@ jobs:
             d="${digest#sha256:}"
             printf '%s' "${statement}" | jq -e --arg d "${d}" '
               (.predicateType | startswith("https://slsa.dev/provenance/"))
+              and
+              (.subject[]? | select(.name | contains(env.image_tag)))
               and
               (.subject[]? | select(.digest.sha256 == $d))
             ' >/dev/null
